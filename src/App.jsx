@@ -10,7 +10,9 @@ import Clientes from "./components/Clientes";
 import Presupuestos from "./components/Presupuestos";
 import Admin from "./components/Admin";
 
-const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAIL || "admin@presupuestos-app.com")
+const ADMIN_EMAILS = (
+  import.meta.env.VITE_ADMIN_EMAIL || "admin@presupuestos-app.com"
+)
   .split(",")
   .map((x) => x.trim().toLowerCase())
   .filter(Boolean);
@@ -76,13 +78,13 @@ export default function App() {
     if (mostrarRegistro) {
       return <Registro onBackToLogin={() => setMostrarRegistro(false)} />;
     }
-    return (
-      <Login onShowRegistro={() => setMostrarRegistro(true)} />
-    );
+    return <Login onShowRegistro={() => setMostrarRegistro(true)} />;
   }
 
   const sessionEmail = (session?.user?.email || "").trim().toLowerCase();
   const isAdmin = ADMIN_EMAILS.includes(sessionEmail);
+  const nombreTaller =
+    session?.user?.user_metadata?.nombre_taller || "Mi taller";
   const secciones = isAdmin
     ? SECCIONES
     : SECCIONES.filter((s) => s.id !== "admin");
@@ -90,7 +92,15 @@ export default function App() {
   return (
     <div className="app">
       <nav className="sidebar">
-        <h2>Herrería</h2>
+        <h2
+          style={{
+            fontSize: "0.9rem",
+            wordBreak: "break-word",
+            lineHeight: "1.4",
+          }}
+        >
+          {nombreTaller}
+        </h2>
         {secciones.map((s) => (
           <button
             key={s.id}
