@@ -1,18 +1,26 @@
-// Supabase Edge Function: admin-list-users
-// Returns auth users only when the requester is the configured admin email.
-
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-};
+const ALLOWED_ORIGINS = [
+  "https://presupuestos-app.vercel.app",
+  "http://localhost:5173",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin)
+    ? origin
+    : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -22,37 +30,38 @@ Deno.serve(async (req) => {
 
     if (!supabaseUrl || !serviceRoleKey || !adminEmail) {
       return new Response(
-        JSON.stringify({
-          error:
-            "Missing required env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_EMAIL",
-        }),
+        JSON.stringify({ error: "Missing required env vars" }),
         {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         },
       );
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing Authorization" }),
+        {
+          status: 401,
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        },
+      );
     }
 
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const {
-      data: { user },
-      error: userError,
-    } = await adminClient.auth.getUser(token);
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const userClient = createClient(supabaseUrl, anonKey ?? serviceRoleKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
 
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -62,9 +71,11 @@ Deno.serve(async (req) => {
     if (callerEmail !== expectedAdminEmail) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
+
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const allUsers = [];
     let page = 1;
@@ -81,7 +92,7 @@ Deno.serve(async (req) => {
           JSON.stringify({ error: "Failed to list users", details: error.message }),
           {
             status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           },
         );
       }
@@ -102,14 +113,15 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ users }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
+
   } catch (err) {
     return new Response(
       JSON.stringify({ error: "Unexpected error", details: String(err) }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       },
     );
   }

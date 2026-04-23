@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabase";
 
 export default function Registro({ onBackToLogin }) {
@@ -9,6 +9,7 @@ export default function Registro({ onBackToLogin }) {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [cargando, setCargando] = useState(false);
+  const timeoutRef = useRef(null);
 
   async function handleRegistro() {
     setError("");
@@ -39,10 +40,16 @@ export default function Registro({ onBackToLogin }) {
       setError(error.message || "No se pudo crear la cuenta");
     } else {
       setOk("Cuenta creada. Revisá tu email para confirmar el registro.");
-      setTimeout(() => onBackToLogin?.(), 1800);
+      timeoutRef.current = setTimeout(() => onBackToLogin?.(), 1800);
     }
     setCargando(false);
   }
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   return (
     <div
