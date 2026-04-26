@@ -11,7 +11,7 @@ const VACIO = {
   direccion: "",
 };
 
-export default function Clientes() {
+export default function Clientes({ soloLectura }) {
   const [clientes, setClientes] = useState([]);
   const [form, setForm] = useState(VACIO);
   const [editId, setEditId] = useState(null);
@@ -197,16 +197,18 @@ export default function Clientes() {
           onChange={handleChange}
         />
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button className="btn btn-primary" onClick={guardar}>
-            {editId ? "Guardar cambios" : "Agregar cliente"}
-          </button>
-          {editId && (
-            <button className="btn btn-secondary" onClick={cancelar}>
-              Cancelar
+        {!soloLectura && (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="btn btn-primary" onClick={guardar}>
+              {editId ? "Guardar cambios" : "Agregar cliente"}
             </button>
-          )}
-        </div>
+            {editId && (
+              <button className="btn btn-secondary" onClick={cancelar}>
+                Cancelar
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -243,22 +245,24 @@ export default function Clientes() {
                   <td>{c.cuil_cuit || "—"}</td>
                   <td>{c.email || "—"}</td>
                   <td>
-                    <div style={{ display: "flex", gap: "0.4rem" }}>
-                      <button
-                        className="btn btn-secondary"
-                        title="Editar"
-                        onClick={() => editar(c)}
-                      >
-                        <IconoEditar />
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        title="Eliminar"
-                        onClick={() => eliminar(c.id)}
-                      >
-                        <IconoEliminar />
-                      </button>
-                    </div>
+                    {!soloLectura && (
+                      <div style={{ display: "flex", gap: "0.4rem" }}>
+                        <button
+                          className="btn btn-secondary"
+                          title="Editar"
+                          onClick={() => editar(c)}
+                        >
+                          <IconoEditar />
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          title="Eliminar"
+                          onClick={() => eliminar(c.id)}
+                        >
+                          <IconoEliminar />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

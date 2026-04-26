@@ -12,7 +12,7 @@ const FORM_VACIO = {
   estado: "borrador",
 };
 
-export default function Presupuestos({ perfil }) {
+export default function Presupuestos({ perfil, soloLectura }) {
   const [vista, setVista] = useState("lista");
   const [presupuestos, setPresupuestos] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -1415,18 +1415,20 @@ export default function Presupuestos({ perfil }) {
         }}
       >
         <h1 style={{ margin: 0 }}>📋 Presupuestos</h1>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setForm(FORM_VACIO);
-            setItemsMat([]);
-            setItemsSer([]);
-            setError("");
-            setVista("nuevo");
-          }}
-        >
-          + Nuevo presupuesto
-        </button>
+        {!soloLectura && (
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setForm(FORM_VACIO);
+              setItemsMat([]);
+              setItemsSer([]);
+              setError("");
+              setVista("nuevo");
+            }}
+          >
+            + Nuevo presupuesto
+          </button>
+        )}
       </div>
 
       <div style={{ marginBottom: "1rem" }}>
@@ -1495,20 +1497,24 @@ export default function Presupuestos({ perfil }) {
                         >
                           <IconoPDF />
                         </button>
-                        <button
-                          className="btn btn-secondary"
-                          title="Editar"
-                          onClick={() => cargarParaEditar(p)}
-                        >
-                          <IconoEditar />
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          title="Eliminar"
-                          onClick={() => eliminarPresupuesto(p.id)}
-                        >
-                          <IconoEliminar />
-                        </button>
+                        {!soloLectura && (
+                          <button
+                            className="btn btn-secondary"
+                            title="Editar"
+                            onClick={() => cargarParaEditar(p)}
+                          >
+                            <IconoEditar />
+                          </button>
+                        )}
+                        {!soloLectura && (
+                          <button
+                            className="btn btn-danger"
+                            title="Eliminar"
+                            onClick={() => eliminarPresupuesto(p.id)}
+                          >
+                            <IconoEliminar />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

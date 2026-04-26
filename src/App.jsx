@@ -34,6 +34,12 @@ export default function App() {
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
   const [perfil, setPerfil] = useState(null);
   const [onboarding, setOnboarding] = useState(false);
+  const [estadoCuenta, setEstadoCuenta] = useState({
+    activo: false,
+    soloLectura: false,
+    mensaje: "",
+  });
+  const [cantPresupuestos, setCantPresupuestos] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -64,12 +70,26 @@ export default function App() {
       .eq("user_id", session.user.id)
       .single();
     setPerfil(data || null);
-    // Si no tiene perfil o no tiene rubros_seleccionados definido → onboarding
+
     if (!data || data.rubros_seleccionados === null) {
       setOnboarding(true);
-    } else {
-      setOnboarding(false);
+      return;
     }
+
+    setOnboarding(false);
+
+    // Contar presupuestos del usuario
+    const { count } = await supabase
+      .from("presupuestos")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", session.user.id);
+
+    const cant = count || 0;
+    setCantPresupuestos(cant);
+
+    const { calcularEstadoCuenta } = await import("./supabase");
+    const estado = calcularEstadoCuenta(data, cant);
+    setEstadoCuenta(estado);
   }
 
   async function handleLogout() {
@@ -211,6 +231,55 @@ export default function App() {
           </button>
         </div>
 
+        {!estadoCuenta.soloLectura &&
+          estadoCuenta.diasRestantes !== undefined && (
+            <div
+              style={{
+                background:
+                  estadoCuenta.diasRestantes <= 5 ||
+                  estadoCuenta.presupuestosRestantes <= 5
+                    ? "#450a0a"
+                    : "#1a1a1a",
+                border: `1px solid ${estadoCuenta.diasRestantes <= 5 || estadoCuenta.presupuestosRestantes <= 5 ? "#dc2626" : "#2a2a2a"}`,
+                borderRadius: "8px",
+                padding: "0.6rem 0.75rem",
+                fontSize: "0.75rem",
+                color:
+                  estadoCuenta.diasRestantes <= 5 ||
+                  estadoCuenta.presupuestosRestantes <= 5
+                    ? "#f87171"
+                    : "#888",
+                lineHeight: "1.5",
+                marginTop: "auto",
+              }}
+            >
+              <div>⏱ {estadoCuenta.diasRestantes} días restantes</div>
+              <div>
+                📋 {estadoCuenta.presupuestosRestantes} presupuestos restantes
+              </div>
+            </div>
+          )}
+
+        {estadoCuenta.soloLectura && (
+          <div
+            style={{
+              background: "#450a0a",
+              border: "1px solid #dc2626",
+              borderRadius: "8px",
+              padding: "0.6rem 0.75rem",
+              fontSize: "0.75rem",
+              color: "#f87171",
+              lineHeight: "1.5",
+              marginTop: "auto",
+            }}
+          >
+            <div style={{ fontWeight: "600", marginBottom: "0.25rem" }}>
+              ⛔ Período de prueba vencido
+            </div>
+            <div style={{ color: "#fca5a5" }}>{estadoCuenta.mensaje}</div>
+          </div>
+        )}
+
         <div style={{ borderTop: "1px solid #2a2a2a", margin: "0.5rem 0" }} />
 
         {SECCIONES.map((s) => (
@@ -246,10 +315,21 @@ export default function App() {
       </nav>
 
       <main className="main-content">
-        {seccion === "presupuestos" && <Presupuestos perfil={perfil} />}
-        {seccion === "materiales" && <Materiales />}
-        {seccion === "servicios" && <Servicios />}
-        {seccion === "clientes" && <Clientes />}
+        {seccion === "presupuestos" && (
+          <Presupuestos
+            perfil={perfil}
+            soloLectura={estadoCuenta.soloLectura}
+          />
+        )}
+        {seccion === "materiales" && (
+          <Materiales soloLectura={estadoCuenta.soloLectura} />
+        )}
+        {seccion === "servicios" && (
+          <Servicios soloLectura={estadoCuenta.soloLectura} />
+        )}
+        {seccion === "clientes" && (
+          <Clientes soloLectura={estadoCuenta.soloLectura} />
+        )}
         {seccion === "perfil" && <Perfil onPerfilActualizado={cargarPerfil} />}
         {isAdmin && seccion === "admin" && <Admin />}
       </main>

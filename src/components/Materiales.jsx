@@ -20,7 +20,7 @@ const VACIO = {
   categoria_id: "",
 };
 
-export default function Materiales() {
+export default function Materiales({ soloLectura }) {
   const [materiales, setMateriales] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [cargandoCategorias, setCargandoCategorias] = useState(true);
@@ -276,80 +276,88 @@ export default function Materiales() {
       <h1>🔩 Materiales</h1>
 
       {/* FORMULARIO */}
-      <div className="card">
-        <h2>{editId ? "Editar material" : "Nuevo material"}</h2>
+      {!soloLectura && (
+        <div className="card">
+          <h2>{editId ? "Editar material" : "Nuevo material"}</h2>
 
-        {error && <p className="msg-error">{error}</p>}
-        {ok && <p className="msg-ok">{ok}</p>}
+          {error && <p className="msg-error">{error}</p>}
+          {ok && <p className="msg-ok">{ok}</p>}
 
-        <div className="form-block">
-          <div className="form-row" style={{ gridTemplateColumns: "2fr 1fr" }}>
+          <div className="form-block">
+            <div
+              className="form-row"
+              style={{ gridTemplateColumns: "2fr 1fr" }}
+            >
+              <input
+                name="nombre"
+                placeholder="Nombre (ej: Caño 40x20)"
+                value={form.nombre}
+                onChange={handleChange}
+              />
+              <select name="unidad" value={form.unidad} onChange={handleChange}>
+                {UNIDADES.map((u) => (
+                  <option key={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+
+            <div
+              className="form-row"
+              style={{ gridTemplateColumns: "2fr auto" }}
+            >
+              <select
+                name="categoria_id"
+                value={form.categoria_id || ""}
+                onChange={handleChange}
+              >
+                <option value="">
+                  {cargandoCategorias ? "Cargando..." : "Sin categoría"}
+                </option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ whiteSpace: "nowrap", padding: "0.6rem 1rem" }}
+                onClick={() => setMostrarModalCategoria(true)}
+              >
+                + Nueva
+              </button>
+            </div>
+
             <input
-              name="nombre"
-              placeholder="Nombre (ej: Caño 40x20)"
-              value={form.nombre}
+              name="descripcion"
+              placeholder="Descripción"
+              value={form.descripcion}
               onChange={handleChange}
             />
-            <select name="unidad" value={form.unidad} onChange={handleChange}>
-              {UNIDADES.map((u) => (
-                <option key={u}>{u}</option>
-              ))}
-            </select>
-          </div>
 
-          <div className="form-row" style={{ gridTemplateColumns: "2fr auto" }}>
-            <select
-              name="categoria_id"
-              value={form.categoria_id || ""}
+            <input
+              name="precio_unitario"
+              type="number"
+              placeholder="Precio unitario ($)"
+              value={form.precio_unitario}
               onChange={handleChange}
-            >
-              <option value="">
-                {cargandoCategorias ? "Cargando..." : "Sin categoría"}
-              </option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ whiteSpace: "nowrap", padding: "0.6rem 1rem" }}
-              onClick={() => setMostrarModalCategoria(true)}
-            >
-              + Nueva
-            </button>
-          </div>
+            />
 
-          <input
-            name="descripcion"
-            placeholder="Descripción"
-            value={form.descripcion}
-            onChange={handleChange}
-          />
-
-          <input
-            name="precio_unitario"
-            type="number"
-            placeholder="Precio unitario ($)"
-            value={form.precio_unitario}
-            onChange={handleChange}
-          />
-
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button className="btn btn-primary" onClick={guardar}>
-              {editId ? "Guardar cambios" : "Agregar material"}
-            </button>
-
-            {editId && (
-              <button className="btn btn-secondary" onClick={cancelar}>
-                Cancelar
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button className="btn btn-primary" onClick={guardar}>
+                {editId ? "Guardar cambios" : "Agregar material"}
               </button>
-            )}
+
+              {editId && (
+                <button className="btn btn-secondary" onClick={cancelar}>
+                  Cancelar
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* LISTADO */}
       <div className="card">
@@ -362,18 +370,20 @@ export default function Materiales() {
           }}
         >
           <h2 style={{ margin: 0 }}>Materiales cargados</h2>
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setMostrarGestionCategorias(true);
-              setErrorCategoria("");
-              setOkCategoria("");
-              setFormCategoria({ nombre: "" });
-              setEditCategoria(null);
-            }}
-          >
-            🏷️ Categorías
-          </button>
+          {!soloLectura && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setMostrarGestionCategorias(true);
+                setErrorCategoria("");
+                setOkCategoria("");
+                setFormCategoria({ nombre: "" });
+                setEditCategoria(null);
+              }}
+            >
+              🏷️ Categorías
+            </button>
+          )}
         </div>
 
         {cargando ? (
@@ -401,22 +411,24 @@ export default function Materiales() {
                     ${parseFloat(m.precio_unitario).toLocaleString("es-AR")}
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: "0.4rem" }}>
-                      <button
-                        className="btn btn-secondary"
-                        title="Editar"
-                        onClick={() => editar(m)}
-                      >
-                        <IconoEditar />
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        title="Eliminar"
-                        onClick={() => eliminar(m.id)}
-                      >
-                        <IconoEliminar />
-                      </button>
-                    </div>
+                    {!soloLectura && (
+                      <div style={{ display: "flex", gap: "0.4rem" }}>
+                        <button
+                          className="btn btn-secondary"
+                          title="Editar"
+                          onClick={() => editar(m)}
+                        >
+                          <IconoEditar />
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          title="Eliminar"
+                          onClick={() => eliminar(m.id)}
+                        >
+                          <IconoEliminar />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

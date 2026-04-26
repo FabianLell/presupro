@@ -3,7 +3,7 @@ import { supabase, getUserId } from "../supabase";
 
 const VACIO = { nombre: "", descripcion: "", precio: "" };
 
-export default function Servicios() {
+export default function Servicios({ soloLectura }) {
   const [servicios, setServicios] = useState([]);
   const [form, setForm] = useState(VACIO);
   const [editId, setEditId] = useState(null);
@@ -153,16 +153,18 @@ export default function Servicios() {
           onChange={handleChange}
         />
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button className="btn btn-primary" onClick={guardar}>
-            {editId ? "Guardar cambios" : "Agregar servicio"}
-          </button>
-          {editId && (
-            <button className="btn btn-secondary" onClick={cancelar}>
-              Cancelar
+        {!soloLectura && (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="btn btn-primary" onClick={guardar}>
+              {editId ? "Guardar cambios" : "Agregar servicio"}
             </button>
-          )}
-        </div>
+            {editId && (
+              <button className="btn btn-secondary" onClick={cancelar}>
+                Cancelar
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -188,22 +190,24 @@ export default function Servicios() {
                   <td style={{ color: "#888" }}>{s.descripcion || "—"}</td>
                   <td>${parseFloat(s.precio).toLocaleString("es-AR")}</td>
                   <td>
-                    <div style={{ display: "flex", gap: "0.4rem" }}>
-                      <button
-                        className="btn btn-secondary"
-                        title="Editar"
-                        onClick={() => editar(s)}
-                      >
-                        <IconoEditar />
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        title="Eliminar"
-                        onClick={() => eliminar(s.id)}
-                      >
-                        <IconoEliminar />
-                      </button>
-                    </div>
+                    {!soloLectura && (
+                      <div style={{ display: "flex", gap: "0.4rem" }}>
+                        <button
+                          className="btn btn-secondary"
+                          title="Editar"
+                          onClick={() => editar(s)}
+                        >
+                          <IconoEditar />
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          title="Eliminar"
+                          onClick={() => eliminar(s.id)}
+                        >
+                          <IconoEliminar />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
