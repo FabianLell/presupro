@@ -268,8 +268,6 @@ export default function Perfil({ onPerfilActualizado }) {
 
   return (
     <>
-      <h1>⚙️ Mi perfil</h1>
-
       <div className="card">
         <h2>Logo del negocio</h2>
 
@@ -434,7 +432,7 @@ export default function Perfil({ onPerfilActualizado }) {
                 {r.nombre}
                 {activo && (
                   <span style={{ marginLeft: "auto", color: "#60a5fa" }}>
-                    ✓
+                    ?
                   </span>
                 )}
               </button>

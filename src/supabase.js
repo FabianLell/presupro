@@ -15,35 +15,32 @@ export async function getUserId() {
 }
 
 export function calcularEstadoCuenta(perfil, cantidadPresupuestos) {
-  if (!perfil) return { activo: false, soloLectura: true, mensaje: "" }
+  if (!perfil) return { soloLectura: true, mensaje: "Tu cuenta no está configurada." }
 
-  // Si fue activado manualmente por el admin
-  if (perfil.activo === true) return { activo: true, soloLectura: false, mensaje: "" }
+  if (perfil.estado === "activo") return { soloLectura: false, mensaje: "" }
 
-  // Calcular días transcurridos
+  if (perfil.estado === "desactivado") return {
+    soloLectura: true,
+    mensaje: "Tu cuenta fue desactivada. Contactate con nosotros para reactivarla."
+  }
+
+  // estado === "prueba" → evaluar período
   const inicio = new Date(perfil.fecha_inicio_prueba)
   const hoy = new Date()
   const diasTranscurridos = Math.floor((hoy - inicio) / (1000 * 60 * 60 * 24))
   const diasRestantes = 30 - diasTranscurridos
 
-  // Verificar límites
-  const vencioTiempo = diasTranscurridos >= 30
-  const vencioPresupuestos = cantidadPresupuestos >= 30
-
-  if (vencioTiempo || vencioPresupuestos) {
-    const motivo = vencioTiempo
-      ? "Tu período de prueba de 30 días ha vencido."
-      : "Alcanzaste el límite de 30 presupuestos del período de prueba."
-    return {
-      activo: false,
-      soloLectura: true,
-      mensaje: motivo
-    }
+  if (diasTranscurridos >= 30) return {
+    soloLectura: true,
+    mensaje: "Tu período de prueba de 30 días ha vencido. Activá tu cuenta para continuar."
   }
 
-  // En período de prueba activo
+  if (cantidadPresupuestos >= 30) return {
+    soloLectura: true,
+    mensaje: "Alcanzaste el límite de 30 presupuestos del período de prueba. Activá tu cuenta para continuar."
+  }
+
   return {
-    activo: false,
     soloLectura: false,
     diasRestantes,
     presupuestosRestantes: 30 - cantidadPresupuestos,

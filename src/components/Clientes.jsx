@@ -11,13 +11,51 @@ const VACIO = {
   direccion: "",
 };
 
+function IconoEditar() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function IconoEliminar() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
 export default function Clientes({ soloLectura }) {
   const [clientes, setClientes] = useState([]);
   const [form, setForm] = useState(VACIO);
-  const [editId, setEditId] = useState(null);
+  const [selId, setSelId] = useState(null);
+  const [modoEdicion, setModoEdicion] = useState(false);
+  const [esNuevo, setEsNuevo] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [confirmEliminar, setConfirmEliminar] = useState(null);
 
   useEffect(() => {
     cargar();
@@ -38,6 +76,47 @@ export default function Clientes({ soloLectura }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
+  function seleccionar(c) {
+    setSelId(c.id);
+    setForm({
+      nombre: c.nombre,
+      apellido: c.apellido,
+      telefono: c.telefono || "",
+      dni: c.dni || "",
+      cuil_cuit: c.cuil_cuit || "",
+      email: c.email || "",
+      direccion: c.direccion || "",
+    });
+    setModoEdicion(false);
+    setEsNuevo(false);
+    setError("");
+    setOk("");
+  }
+
+  function nuevo() {
+    setSelId(null);
+    setForm(VACIO);
+    setModoEdicion(true);
+    setEsNuevo(true);
+    setError("");
+    setOk("");
+  }
+
+  function cancelar() {
+    if (esNuevo) {
+      setSelId(null);
+      setForm(VACIO);
+      setModoEdicion(false);
+      setEsNuevo(false);
+    } else {
+      const c = clientes.find((x) => x.id === selId);
+      if (c) seleccionar(c);
+      setModoEdicion(false);
+    }
+    setError("");
+    setOk("");
+  }
+
   async function guardar() {
     setError("");
     setOk("");
@@ -56,97 +135,104 @@ export default function Clientes({ soloLectura }) {
       direccion: form.direccion.trim(),
     };
 
-    if (editId) {
+    if (!esNuevo && selId) {
       const { error } = await supabase
         .from("clientes")
         .update(datos)
-        .eq("id", editId);
+        .eq("id", selId);
       if (error) return setError("Error al actualizar");
       setOk("Cliente actualizado");
+      setModoEdicion(false);
     } else {
-      const { error } = await supabase.from("clientes").insert([datos]);
+      const { data, error } = await supabase
+        .from("clientes")
+        .insert([datos])
+        .select()
+        .single();
       if (error) return setError("Error al guardar");
       setOk("Cliente agregado");
+      setEsNuevo(false);
+      setModoEdicion(false);
+      setSelId(data.id);
     }
-
-    setForm(VACIO);
-    setEditId(null);
-    cargar();
-  }
-
-  function editar(c) {
-    setForm({
-      nombre: c.nombre,
-      apellido: c.apellido,
-      telefono: c.telefono || "",
-      dni: c.dni || "",
-      cuil_cuit: c.cuil_cuit || "",
-      email: c.email || "",
-      direccion: c.direccion || "",
-    });
-    setEditId(c.id);
-    setError("");
-    setOk("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    await cargar();
   }
 
   async function eliminar(id) {
-    if (!confirm("¿Eliminar este cliente?")) return;
     const { error } = await supabase.from("clientes").delete().eq("id", id);
-    if (error) return setError("Error al eliminar");
+    if (error) {
+      setError("Error al eliminar");
+      return;
+    }
+    setSelId(null);
+    setForm(VACIO);
+    setModoEdicion(false);
+    setConfirmEliminar(null);
     cargar();
   }
 
-  function cancelar() {
-    setForm(VACIO);
-    setEditId(null);
-    setError("");
-    setOk("");
-  }
-
-  function IconoEditar() {
+  const filtrados = clientes.filter((c) => {
+    if (!busqueda) return true;
+    const t = busqueda.toLowerCase();
     return (
-      <svg
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-      </svg>
+      c.nombre?.toLowerCase().includes(t) ||
+      c.apellido?.toLowerCase().includes(t) ||
+      c.telefono?.toLowerCase().includes(t) ||
+      c.email?.toLowerCase().includes(t) ||
+      c.dni?.toLowerCase().includes(t)
     );
-  }
+  });
 
-  function IconoEliminar() {
-    return (
-      <svg
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <polyline points="3 6 5 6 21 6" />
-        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-        <path d="M10 11v6M14 11v6" />
-        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-      </svg>
-    );
-  }
+  const formularioVacio = !selId && !esNuevo;
 
   return (
-    <>
-      <h1>👤 Clientes</h1>
-
-      <div className="card">
-        <h2>{editId ? "Editar cliente" : "Nuevo cliente"}</h2>
-
-        {error && <p className="msg-error">{error}</p>}
-        {ok && <p className="msg-ok">{ok}</p>}
+    <div className="md-layout">
+      {/* FORMULARIO */}
+      <div className="md-form-area">
+        <div className="md-form-header">
+          <h2 className={formularioVacio ? "" : "activo"}>
+            {esNuevo
+              ? "Nuevo cliente"
+              : selId
+                ? "Datos del cliente"
+                : "Seleccioná un cliente"}
+          </h2>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            {error && <span className="msg-error">{error}</span>}
+            {ok && <span className="msg-ok">{ok}</span>}
+            {!soloLectura && !modoEdicion && (
+              <button className="btn btn-primary" onClick={nuevo}>
+                + Nuevo
+              </button>
+            )}
+            {!soloLectura && selId && !modoEdicion && !esNuevo && (
+              <button
+                className="btn btn-secondary"
+                onClick={() => setModoEdicion(true)}
+              >
+                <IconoEditar /> Editar
+              </button>
+            )}
+            {!soloLectura && selId && !esNuevo && !modoEdicion && (
+              <button
+                className="btn btn-danger"
+                onClick={() => setConfirmEliminar(selId)}
+              >
+                <IconoEliminar /> Eliminar
+              </button>
+            )}
+            {modoEdicion && (
+              <>
+                <button className="btn btn-primary" onClick={guardar}>
+                  Guardar
+                </button>
+                <button className="btn btn-secondary" onClick={cancelar}>
+                  Cancelar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
 
         <div className="form-row">
           <input
@@ -154,40 +240,46 @@ export default function Clientes({ soloLectura }) {
             placeholder="Nombre *"
             value={form.nombre}
             onChange={handleChange}
+            readOnly={!modoEdicion}
           />
           <input
             name="apellido"
             placeholder="Apellido *"
             value={form.apellido}
             onChange={handleChange}
+            readOnly={!modoEdicion}
           />
         </div>
-        <div className="form-row">
+        <div className="form-row" style={{ marginTop: "0.65rem" }}>
           <input
             name="telefono"
             placeholder="Teléfono"
             value={form.telefono}
             onChange={handleChange}
+            readOnly={!modoEdicion}
           />
           <input
             name="email"
             placeholder="Email"
             value={form.email}
             onChange={handleChange}
+            readOnly={!modoEdicion}
           />
         </div>
-        <div className="form-row">
+        <div className="form-row" style={{ marginTop: "0.65rem" }}>
           <input
             name="dni"
             placeholder="DNI"
             value={form.dni}
             onChange={handleChange}
+            readOnly={!modoEdicion}
           />
           <input
             name="cuil_cuit"
             placeholder="CUIL / CUIT"
             value={form.cuil_cuit}
             onChange={handleChange}
+            readOnly={!modoEdicion}
           />
         </div>
         <input
@@ -195,81 +287,92 @@ export default function Clientes({ soloLectura }) {
           placeholder="Dirección"
           value={form.direccion}
           onChange={handleChange}
+          readOnly={!modoEdicion}
+          style={{ marginTop: "0.65rem" }}
         />
-
-        {!soloLectura && (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button className="btn btn-primary" onClick={guardar}>
-              {editId ? "Guardar cambios" : "Agregar cliente"}
-            </button>
-            {editId && (
-              <button className="btn btn-secondary" onClick={cancelar}>
-                Cancelar
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
-      <div className="card">
-        <h2>Clientes cargados</h2>
+      {/* BUSCADOR */}
+      <div className="md-search-area">
+        <input
+          placeholder="Buscar cliente..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+        />
+      </div>
+
+      {/* LISTADO */}
+      <div className="md-list-area">
         {cargando ? (
-          <p style={{ color: "#888" }}>Cargando...</p>
-        ) : clientes.length === 0 ? (
-          <p style={{ color: "#888" }}>No hay clientes todavía</p>
+          <p style={{ color: "#888", padding: "1rem" }}>Cargando...</p>
+        ) : filtrados.length === 0 ? (
+          <p style={{ color: "#888", padding: "1rem" }}>No hay clientes</p>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Nombre</th>
+                <th>Apellido, Nombre</th>
                 <th>Teléfono</th>
-                <th>DNI</th>
-                <th>CUIL/CUIT</th>
                 <th>Email</th>
-                <th></th>
+                <th>DNI</th>
               </tr>
             </thead>
             <tbody>
-              {clientes.map((c) => (
-                <tr key={c.id}>
+              {filtrados.map((c) => (
+                <tr
+                  key={c.id}
+                  className={selId === c.id ? "seleccionado" : ""}
+                  onClick={() => seleccionar(c)}
+                >
                   <td>
                     <strong>{c.apellido}</strong>, {c.nombre}
                     {c.direccion && (
-                      <div style={{ fontSize: "0.8rem", color: "#888" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#888" }}>
                         {c.direccion}
                       </div>
                     )}
                   </td>
                   <td>{c.telefono || "—"}</td>
-                  <td>{c.dni || "—"}</td>
-                  <td>{c.cuil_cuit || "—"}</td>
                   <td>{c.email || "—"}</td>
-                  <td>
-                    {!soloLectura && (
-                      <div style={{ display: "flex", gap: "0.4rem" }}>
-                        <button
-                          className="btn btn-secondary"
-                          title="Editar"
-                          onClick={() => editar(c)}
-                        >
-                          <IconoEditar />
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          title="Eliminar"
-                          onClick={() => eliminar(c.id)}
-                        >
-                          <IconoEliminar />
-                        </button>
-                      </div>
-                    )}
-                  </td>
+                  <td>{c.dni || "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
-    </>
+
+      {/* MODAL CONFIRMAR ELIMINAR */}
+      {confirmEliminar && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>¿Eliminar cliente?</h3>
+            <p
+              style={{
+                color: "#888",
+                fontSize: "0.9rem",
+                margin: "0.5rem 0 1rem",
+              }}
+            >
+              Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                className="btn btn-danger"
+                onClick={() => eliminar(confirmEliminar)}
+              >
+                Eliminar
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setConfirmEliminar(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

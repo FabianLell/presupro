@@ -196,9 +196,11 @@ export default function Presupuestos({ perfil, soloLectura }) {
 
   const presupuestosFiltrados = presupuestos.filter((p) => {
     if (!filtroCliente) return true;
+    const texto = filtroCliente.toLowerCase();
     const nombre =
       `${p.clientes?.apellido} ${p.clientes?.nombre}`.toLowerCase();
-    return nombre.includes(filtroCliente.toLowerCase());
+    const obs = (p.observaciones || "").toLowerCase();
+    return nombre.includes(texto) || obs.includes(texto);
   });
 
   const totalMat = itemsMat.reduce((acc, i) => acc + i.subtotal, 0);
@@ -288,6 +290,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
     setItemsMat([]);
     setItemsSer([]);
     await cargarTodo();
+    // Volver al listado de presupuestos
     setVista("lista");
   }
 
@@ -339,22 +342,6 @@ export default function Presupuestos({ perfil, soloLectura }) {
       >
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
         <circle cx="12" cy="12" r="3" />
-      </svg>
-    );
-  }
-
-  function IconoEditar() {
-    return (
-      <svg
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
       </svg>
     );
   }
@@ -432,26 +419,29 @@ export default function Presupuestos({ perfil, soloLectura }) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "1rem",
-            marginBottom: "1.5rem",
+            justifyContent: "space-between",
+            marginBottom: "1rem",
           }}
         >
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setVista("lista");
-              setEditId(null);
-            }}
-          >
-            ← Volver
-          </button>
-          <h1 style={{ margin: 0 }}>Presupuesto #{p.numero}</h1>
-          <button
-            className="btn btn-primary"
-            onClick={generarPDF}
-            style={{ marginLeft: "auto" }}
-          >
-            📄 Descargar PDF
+          <div style={{ display: "flex", gap: "0.75rem" }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setVista("lista");
+                setEditId(null);
+              }}
+            >
+              {"←"} Volver
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => cargarParaEditar(p)}
+            >
+              Editar
+            </button>
+          </div>
+          <button className="btn btn-primary" onClick={generarPDF}>
+            Descargar PDF
           </button>
         </div>
 
@@ -592,64 +582,229 @@ export default function Presupuestos({ perfil, soloLectura }) {
           </div>
         </div>
 
-        <div className="card no-print" style={{ borderColor: "#3a3a3a" }}>
-          <h2>Cliente</h2>
-          {cliente ? (
-            <p>
-              <strong>
-                {cliente.apellido}, {cliente.nombre}
-              </strong>
-              {cliente.telefono && (
-                <span style={{ color: "#888", marginLeft: "1rem" }}>
-                  {cliente.telefono}
+        <div
+          className="card no-print"
+          style={{ borderColor: "#3a3a3a", padding: "0.5rem" }}
+        >
+          <h2 style={{ fontSize: "0.85rem", marginBottom: "0.4rem" }}>
+            Datos del Presupuesto
+          </h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "0.3rem 1rem",
+              fontSize: "0.8rem",
+            }}
+          >
+            <div>
+              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                Cliente:
+              </span>
+              <div
+                style={{
+                  color: "#e5e7eb",
+                  fontWeight: "500",
+                  marginTop: "0.1rem",
+                }}
+              >
+                {cliente
+                  ? `${cliente.apellido}, ${cliente.nombre}`
+                  : "Cliente no encontrado"}
+              </div>
+            </div>
+            <div>
+              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                Fecha:
+              </span>
+              <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
+                {p.fecha}
+              </div>
+            </div>
+            <div>
+              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                Estado:
+              </span>
+              <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
+                {badgeEstado(p.estado)}
+              </div>
+            </div>
+            <div>
+              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                N° Presupuesto:
+              </span>
+              <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
+                {p.numero}
+              </div>
+            </div>
+            {cliente?.telefono && (
+              <div>
+                <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                  Teléfono:
                 </span>
-              )}
-            </p>
-          ) : (
-            <p style={{ color: "#888" }}>Cliente no encontrado</p>
-          )}
-          <p style={{ color: "#888", marginTop: "0.5rem" }}>
-            Fecha: {p.fecha} &nbsp;|&nbsp; Estado: {badgeEstado(p.estado)}
-          </p>
+                <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
+                  {cliente.telefono}
+                </div>
+              </div>
+            )}
+            {cliente?.direccion && (
+              <div>
+                <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                  Dirección:
+                </span>
+                <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
+                  {cliente.direccion}
+                </div>
+              </div>
+            )}
+          </div>
           {p.observaciones && (
-            <p style={{ marginTop: "0.5rem" }}>{p.observaciones}</p>
+            <div
+              style={{
+                marginTop: "0.5rem",
+                paddingTop: "0.3rem",
+                borderTop: "1px solid #374151",
+              }}
+            >
+              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                Observaciones:
+              </span>
+              <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
+                {p.observaciones}
+              </div>
+            </div>
           )}
         </div>
 
         {p.items_materiales.length > 0 && (
-          <div className="card">
-            <h2>Materiales</h2>
-            <table>
+          <div className="card" style={{ padding: "0.75rem" }}>
+            <h2 style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+              Materiales
+            </h2>
+            <table
+              style={{
+                marginTop: "0.25rem",
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "0.85rem",
+              }}
+            >
               <thead>
-                <tr>
-                  <th>Material</th>
-                  <th>Unidad</th>
-                  <th>Cantidad</th>
-                  <th>Precio unit.</th>
-                  <th>Subtotal</th>
+                <tr style={{ background: "#2c3e50" }}>
+                  <th
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      textAlign: "left",
+                      borderBottom: "2px solid #34495e",
+                      fontWeight: "600",
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    Material
+                  </th>
+                  <th
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      textAlign: "center",
+                      borderBottom: "2px solid #34495e",
+                      fontWeight: "600",
+                      color: "#e5e7eb",
+                      width: "80px",
+                    }}
+                  >
+                    Cant.
+                  </th>
+                  <th
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      textAlign: "right",
+                      borderBottom: "2px solid #34495e",
+                      fontWeight: "600",
+                      color: "#e5e7eb",
+                      width: "110px",
+                    }}
+                  >
+                    Precio unit.
+                  </th>
+                  <th
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      textAlign: "right",
+                      borderBottom: "2px solid #34495e",
+                      fontWeight: "600",
+                      color: "#e5e7eb",
+                      width: "110px",
+                    }}
+                  >
+                    Subtotal
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {p.items_materiales.map((i) => (
-                  <tr key={i.id}>
-                    <td>{i.materiales?.nombre}</td>
-                    <td>
-                      <span className="badge badge-blue">
-                        {i.materiales?.unidad}
+                  <tr key={i.id} style={{ borderBottom: "1px solid #34495e" }}>
+                    <td style={{ padding: "0.25rem 0.5rem", color: "#e5e7eb" }}>
+                      {i.materiales?.nombre}{" "}
+                      <span style={{ color: "#9ca3af", fontSize: "0.8rem" }}>
+                        ({i.materiales?.unidad})
                       </span>
                     </td>
-                    <td>{i.cantidad}</td>
-                    <td>
+                    <td
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        textAlign: "center",
+                        color: "#e5e7eb",
+                      }}
+                    >
+                      {i.cantidad}
+                    </td>
+                    <td
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        textAlign: "right",
+                        fontFamily: "monospace",
+                        color: "#e5e7eb",
+                      }}
+                    >
                       ${parseFloat(i.precio_unitario).toLocaleString("es-AR")}
                     </td>
-                    <td>${parseFloat(i.subtotal).toLocaleString("es-AR")}</td>
+                    <td
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        textAlign: "right",
+                        fontFamily: "monospace",
+                        fontWeight: "600",
+                        color: "#e5e7eb",
+                      }}
+                    >
+                      ${parseFloat(i.subtotal).toLocaleString("es-AR")}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="total-box" style={{ marginTop: "1rem" }}>
-              <span>Total materiales</span>
-              <strong>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "0.4rem 0.75rem",
+                backgroundColor: "#1e3a5f",
+                border: "1px solid #2563eb",
+                borderRadius: "4px",
+                marginTop: "0.25rem",
+              }}
+            >
+              <span style={{ fontWeight: "600", color: "#93c5fd" }}>
+                Total materiales
+              </span>
+              <strong
+                style={{
+                  fontSize: "0.95rem",
+                  color: "#fff",
+                  fontFamily: "monospace",
+                }}
+              >
                 ${parseFloat(p.total_materiales).toLocaleString("es-AR")}
               </strong>
             </div>
@@ -657,29 +812,107 @@ export default function Presupuestos({ perfil, soloLectura }) {
         )}
 
         {p.items_servicios.length > 0 && (
-          <div className="card">
-            <h2>Servicios</h2>
-            <table>
+          <div className="card" style={{ padding: "0.75rem" }}>
+            <h2 style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+              Servicios
+            </h2>
+            <table
+              style={{
+                marginTop: "0.25rem",
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "0.85rem",
+              }}
+            >
               <thead>
-                <tr>
-                  <th>Servicio</th>
-                  <th>Descripción</th>
-                  <th>Precio</th>
+                <tr style={{ background: "#2c3e50" }}>
+                  <th
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      textAlign: "left",
+                      borderBottom: "2px solid #34495e",
+                      fontWeight: "600",
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    Servicio
+                  </th>
+                  <th
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      textAlign: "left",
+                      borderBottom: "2px solid #34495e",
+                      fontWeight: "600",
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    Descripción / nota
+                  </th>
+                  <th
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      textAlign: "right",
+                      borderBottom: "2px solid #34495e",
+                      fontWeight: "600",
+                      color: "#e5e7eb",
+                      width: "110px",
+                    }}
+                  >
+                    Precio
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {p.items_servicios.map((i) => (
-                  <tr key={i.id}>
-                    <td>{i.servicios?.nombre}</td>
-                    <td style={{ color: "#888" }}>{i.descripcion || "—"}</td>
-                    <td>${parseFloat(i.precio).toLocaleString("es-AR")}</td>
+                  <tr key={i.id} style={{ borderBottom: "1px solid #34495e" }}>
+                    <td
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        color: "#e5e7eb",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {i.servicios?.nombre}
+                    </td>
+                    <td style={{ padding: "0.25rem 0.5rem", color: "#9ca3af" }}>
+                      {i.descripcion || "â"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        textAlign: "right",
+                        fontFamily: "monospace",
+                        color: "#e5e7eb",
+                      }}
+                    >
+                      ${parseFloat(i.precio).toLocaleString("es-AR")}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="total-box" style={{ marginTop: "1rem" }}>
-              <span>Total servicios</span>
-              <strong>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "0.4rem 0.75rem",
+                backgroundColor: "#1e3a5f",
+                border: "1px solid #2563eb",
+                borderRadius: "4px",
+                marginTop: "0.25rem",
+              }}
+            >
+              <span style={{ fontWeight: "600", color: "#93c5fd" }}>
+                Total servicios
+              </span>
+              <strong
+                style={{
+                  fontSize: "0.95rem",
+                  color: "#fff",
+                  fontFamily: "monospace",
+                }}
+              >
                 ${parseFloat(p.total_servicios).toLocaleString("es-AR")}
               </strong>
             </div>
@@ -1118,13 +1351,14 @@ export default function Presupuestos({ perfil, soloLectura }) {
   // ── VISTA NUEVO ────────────────────────────────────────────
   if (vista === "nuevo") {
     return (
-      <>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: "1rem",
-            marginBottom: "1.5rem",
+            marginBottom: "1rem",
+            flexShrink: 0,
           }}
         >
           <button
@@ -1134,290 +1368,539 @@ export default function Presupuestos({ perfil, soloLectura }) {
               setEditId(null);
             }}
           >
-            ← Volver
+            ← Cancelar
           </button>
-          <h1 style={{ margin: 0 }}>
-            {editId ? "Editar presupuesto" : "Nuevo presupuesto"}
-          </h1>
+          <button
+            className="btn btn-primary"
+            onClick={guardarPresupuesto}
+            disabled={guardando}
+          >
+            {guardando ? "Guardando..." : "Guardar"}
+          </button>
         </div>
 
         {error && <p className="msg-error">{error}</p>}
 
-        <div className="card">
-          <h2>Datos generales</h2>
-          <div className="form-row">
-            <select
-              name="cliente_id"
-              value={form.cliente_id}
-              onChange={handleChange}
-            >
-              <option value="">— Seleccioná un cliente —</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.apellido}, {c.nombre}
-                </option>
-              ))}
-            </select>
-            <input
-              name="fecha"
-              type="date"
-              value={form.fecha}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-row">
-            <input
-              name="observaciones"
-              placeholder="Observaciones (opcional)"
-              value={form.observaciones}
-              onChange={handleChange}
-            />
-            <select name="estado" value={form.estado} onChange={handleChange}>
-              <option value="borrador">Borrador</option>
-              <option value="enviado">Enviado</option>
-              <option value="aprobado">Aprobado</option>
-              <option value="rechazado">Rechazado</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="card">
-          <h2>Agregar materiales</h2>
-          <div className="form-row">
-            <select
-              value={categoriaSel}
-              onChange={(e) => {
-                setCategoriaSel(e.target.value);
-                setMatSel("");
-              }}
-            >
-              <option value="">— Todas las categorías —</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.nombre}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-row">
-            <select value={matSel} onChange={(e) => setMatSel(e.target.value)}>
-              <option value="">— Seleccioná un material —</option>
-              {materiales
-                .filter(
-                  (m) => !categoriaSel || m.categorias?.nombre === categoriaSel,
-                )
-                .map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre} — $
-                    {parseFloat(m.precio_unitario).toLocaleString("es-AR")} /{" "}
-                    {m.unidad}
+        <div style={{ flex: 1, paddingBottom: "0.5rem" }}>
+          <div className="card">
+            <h2>Datos generales</h2>
+            <div className="form-row">
+              <select
+                name="cliente_id"
+                value={form.cliente_id}
+                onChange={handleChange}
+              >
+                <option value="">— Seleccioná un cliente —</option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.apellido}, {c.nombre}
                   </option>
                 ))}
-            </select>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              placeholder="Cantidad"
-              value={matCant}
-              onChange={(e) => setMatCant(e.target.value)}
-            />
+              </select>
+              <input
+                name="fecha"
+                type="date"
+                value={form.fecha}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-row">
+              <input
+                name="observaciones"
+                placeholder="Observaciones (opcional)"
+                value={form.observaciones}
+                onChange={handleChange}
+              />
+              <select name="estado" value={form.estado} onChange={handleChange}>
+                <option value="borrador">Borrador</option>
+                <option value="enviado">Enviado</option>
+                <option value="aprobado">Aprobado</option>
+                <option value="rechazado">Rechazado</option>
+              </select>
+            </div>
           </div>
-          <button className="btn btn-secondary" onClick={agregarMaterial}>
-            + Agregar material
-          </button>
-          {itemsMat.length > 0 && (
-            <>
-              <table style={{ marginTop: "1rem" }}>
-                <thead>
-                  <tr>
-                    <th>Material</th>
-                    <th>Cant.</th>
-                    <th>Precio unit.</th>
-                    <th>Subtotal</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {itemsMat.map((i) => (
-                    <tr key={i.material_id}>
-                      <td>
-                        {i.nombre}{" "}
-                        <span className="badge badge-blue">{i.unidad}</span>
-                      </td>
-                      <td>
-                        <input
-                          style={{ margin: 0, width: "80px" }}
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={i.cantidad}
-                          onChange={(e) => {
-                            const cant = parseFloat(e.target.value) || 0;
-                            setItemsMat(
-                              itemsMat.map((m) =>
-                                m.material_id === i.material_id
-                                  ? {
-                                      ...m,
-                                      cantidad: cant,
-                                      subtotal: cant * m.precio_unitario,
-                                    }
-                                  : m,
-                              ),
-                            );
+
+          <div className="card">
+            <h2>Agregar materiales</h2>
+            <div className="form-row">
+              <select
+                value={categoriaSel}
+                onChange={(e) => {
+                  setCategoriaSel(e.target.value);
+                  setMatSel("");
+                }}
+              >
+                <option value="">Todas las categorías</option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.nombre}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={matSel}
+                onChange={(e) => setMatSel(e.target.value)}
+              >
+                <option value="">Seleccioná un material</option>
+                {materiales
+                  .filter(
+                    (m) =>
+                      !categoriaSel || m.categorias?.nombre === categoriaSel,
+                  )
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nombre} - $
+                      {parseFloat(m.precio_unitario).toLocaleString("es-AR")} /{" "}
+                      {m.unidad}
+                    </option>
+                  ))}
+              </select>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="Cantidad"
+                value={matCant}
+                onChange={(e) => setMatCant(e.target.value)}
+              />
+              <button className="btn btn-secondary" onClick={agregarMaterial}>
+                + Agregar
+              </button>
+            </div>
+            {itemsMat.length > 0 && (
+              <>
+                <table
+                  style={{
+                    marginTop: "0.25rem",
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  <thead>
+                    <tr style={{ background: "#2c3e50" }}>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "left",
+                          borderBottom: "2px solid #34495e",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                        }}
+                      >
+                        Material
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "center",
+                          borderBottom: "2px solid #34495e",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          width: "80px",
+                        }}
+                      >
+                        Cant.
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "right",
+                          borderBottom: "2px solid #34495e",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          width: "110px",
+                        }}
+                      >
+                        Precio unit.
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "right",
+                          borderBottom: "2px solid #34495e",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          width: "110px",
+                        }}
+                      >
+                        Subtotal
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "center",
+                          borderBottom: "2px solid #34495e",
+                          width: "40px",
+                          color: "#e5e7eb",
+                        }}
+                      ></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemsMat.map((i) => (
+                      <tr
+                        key={i.material_id}
+                        style={{ borderBottom: "1px solid #34495e" }}
+                      >
+                        <td
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            color: "#e5e7eb",
                           }}
-                        />
-                      </td>
-                      <td>
-                        ${parseFloat(i.precio_unitario).toLocaleString("es-AR")}
-                      </td>
-                      <td>${parseFloat(i.subtotal).toLocaleString("es-AR")}</td>
-                      <td>
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => quitarMaterial(i.material_id)}
                         >
-                          ✕
-                        </button>
-                      </td>
+                          {i.nombre}{" "}
+                          <span
+                            style={{ color: "#9ca3af", fontSize: "0.8rem" }}
+                          >
+                            ({i.unidad})
+                          </span>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            textAlign: "center",
+                          }}
+                        >
+                          <input
+                            style={{
+                              margin: 0,
+                              width: "60px",
+                              padding: "0.2rem",
+                              textAlign: "center",
+                              border: "1px solid #4b5563",
+                              borderRadius: "3px",
+                              backgroundColor: "#374151",
+                              color: "#e5e7eb",
+                            }}
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={i.cantidad}
+                            onChange={(e) => {
+                              const cant = parseFloat(e.target.value) || 0;
+                              setItemsMat(
+                                itemsMat.map((m) =>
+                                  m.material_id === i.material_id
+                                    ? {
+                                        ...m,
+                                        cantidad: cant,
+                                        subtotal: cant * m.precio_unitario,
+                                      }
+                                    : m,
+                                ),
+                              );
+                            }}
+                          />
+                        </td>
+                        <td
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                            color: "#e5e7eb",
+                          }}
+                        >
+                          $
+                          {parseFloat(i.precio_unitario).toLocaleString(
+                            "es-AR",
+                          )}
+                        </td>
+                        <td
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                            fontWeight: "600",
+                            color: "#e5e7eb",
+                          }}
+                        >
+                          ${parseFloat(i.subtotal).toLocaleString("es-AR")}
+                        </td>
+                        <td
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            textAlign: "center",
+                          }}
+                        >
+                          <button
+                            className="btn btn-danger"
+                            style={{
+                              padding: "0.2rem 0.4rem",
+                              fontSize: "0.75rem",
+                            }}
+                            onClick={() => quitarMaterial(i.material_id)}
+                          >
+                            X
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "0.4rem 0.75rem",
+                    backgroundColor: "#1e3a5f",
+                    border: "1px solid #2563eb",
+                    borderRadius: "4px",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  <span style={{ fontWeight: "600", color: "#93c5fd" }}>
+                    Total materiales
+                  </span>
+                  <strong
+                    style={{
+                      fontSize: "0.95rem",
+                      color: "#fff",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    ${totalMat.toLocaleString("es-AR")}
+                  </strong>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="card">
+            <h2>Agregar servicios</h2>
+            <div className="form-row">
+              <select
+                value={serSel}
+                onChange={(e) => setSerSel(e.target.value)}
+              >
+                <option value="">— Seleccioná un servicio —</option>
+                {servicios.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre} — ${parseFloat(s.precio).toLocaleString("es-AR")}
+                  </option>
+                ))}
+              </select>
+              <button className="btn btn-secondary" onClick={agregarServicio}>
+                + Agregar servicio
+              </button>
+            </div>
+            {itemsSer.length > 0 && (
+              <>
+                <table
+                  style={{
+                    marginTop: "0.25rem",
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  <thead>
+                    <tr style={{ background: "#2c3e50" }}>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "left",
+                          borderBottom: "2px solid #34495e",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                        }}
+                      >
+                        Servicio
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "left",
+                          borderBottom: "2px solid #34495e",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                        }}
+                      >
+                        Descripción / nota
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "right",
+                          borderBottom: "2px solid #34495e",
+                          fontWeight: "600",
+                          color: "#e5e7eb",
+                          width: "110px",
+                        }}
+                      >
+                        Precio
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          textAlign: "center",
+                          borderBottom: "2px solid #34495e",
+                          width: "40px",
+                          color: "#e5e7eb",
+                        }}
+                      ></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="total-box">
-                <span>Total materiales</span>
-                <strong>${totalMat.toLocaleString("es-AR")}</strong>
-              </div>
-            </>
+                  </thead>
+                  <tbody>
+                    {itemsSer.map((i) => (
+                      <tr
+                        key={i.servicio_id}
+                        style={{ borderBottom: "1px solid #34495e" }}
+                      >
+                        <td
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            whiteSpace: "nowrap",
+                            color: "#e5e7eb",
+                          }}
+                        >
+                          {i.nombre}
+                        </td>
+                        <td style={{ padding: "0.25rem 0.5rem" }}>
+                          <input
+                            style={{
+                              margin: 0,
+                              width: "100%",
+                              padding: "0.2rem",
+                              border: "1px solid #4b5563",
+                              borderRadius: "3px",
+                              backgroundColor: "#374151",
+                              color: "#e5e7eb",
+                            }}
+                            placeholder="Nota opcional..."
+                            value={i.descripcion}
+                            onChange={(e) =>
+                              actualizarServicio(
+                                i.servicio_id,
+                                "descripcion",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </td>
+                        <td
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            textAlign: "right",
+                          }}
+                        >
+                          <input
+                            style={{
+                              margin: 0,
+                              width: "90px",
+                              padding: "0.2rem",
+                              textAlign: "right",
+                              border: "1px solid #4b5563",
+                              borderRadius: "3px",
+                              fontFamily: "monospace",
+                              backgroundColor: "#374151",
+                              color: "#e5e7eb",
+                            }}
+                            type="number"
+                            value={i.precio}
+                            onChange={(e) =>
+                              actualizarServicio(
+                                i.servicio_id,
+                                "precio",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </td>
+                        <td
+                          style={{
+                            padding: "0.25rem 0.5rem",
+                            textAlign: "center",
+                          }}
+                        >
+                          <button
+                            className="btn btn-danger"
+                            style={{
+                              padding: "0.2rem 0.4rem",
+                              fontSize: "0.75rem",
+                            }}
+                            onClick={() => quitarServicio(i.servicio_id)}
+                          >
+                            X
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "0.4rem 0.75rem",
+                    backgroundColor: "#1e3a5f",
+                    border: "1px solid #2563eb",
+                    borderRadius: "4px",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  <span style={{ fontWeight: "600", color: "#93c5fd" }}>
+                    Total servicios
+                  </span>
+                  <strong
+                    style={{
+                      fontSize: "0.95rem",
+                      color: "#fff",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    ${totalSer.toLocaleString("es-AR")}
+                  </strong>
+                </div>
+              </>
+            )}
+          </div>
+
+          {(itemsMat.length > 0 || itemsSer.length > 0) && (
+            <div
+              className="total-box"
+              style={{
+                fontSize: "1.2rem",
+                marginTop: "1rem",
+                borderColor: "#2563eb",
+                background: "#1e3a5f",
+              }}
+            >
+              <span style={{ color: "#93c5fd" }}>TOTAL GENERAL</span>
+              <strong style={{ color: "#fff", fontSize: "1.3rem" }}>
+                ${totalGen.toLocaleString("es-AR")}
+              </strong>
+            </div>
           )}
         </div>
-
-        <div className="card">
-          <h2>Agregar servicios</h2>
-          <div className="form-row">
-            <select value={serSel} onChange={(e) => setSerSel(e.target.value)}>
-              <option value="">— Seleccioná un servicio —</option>
-              {servicios.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nombre} — ${parseFloat(s.precio).toLocaleString("es-AR")}
-                </option>
-              ))}
-            </select>
-            <button className="btn btn-secondary" onClick={agregarServicio}>
-              + Agregar servicio
-            </button>
-          </div>
-          {itemsSer.length > 0 && (
-            <>
-              <table style={{ marginTop: "1rem" }}>
-                <thead>
-                  <tr>
-                    <th>Servicio</th>
-                    <th>Descripción / nota</th>
-                    <th>Precio</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {itemsSer.map((i) => (
-                    <tr key={i.servicio_id}>
-                      <td style={{ whiteSpace: "nowrap" }}>{i.nombre}</td>
-                      <td>
-                        <input
-                          style={{ margin: 0 }}
-                          placeholder="Nota opcional..."
-                          value={i.descripcion}
-                          onChange={(e) =>
-                            actualizarServicio(
-                              i.servicio_id,
-                              "descripcion",
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          style={{ margin: 0, width: "120px" }}
-                          type="number"
-                          value={i.precio}
-                          onChange={(e) =>
-                            actualizarServicio(
-                              i.servicio_id,
-                              "precio",
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => quitarServicio(i.servicio_id)}
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="total-box">
-                <span>Total servicios</span>
-                <strong>${totalSer.toLocaleString("es-AR")}</strong>
-              </div>
-            </>
-          )}
-        </div>
-
-        {(itemsMat.length > 0 || itemsSer.length > 0) && (
-          <div
-            className="total-box"
-            style={{
-              fontSize: "1.2rem",
-              marginTop: "1rem",
-              borderColor: "#2563eb",
-              background: "#1e3a5f",
-            }}
-          >
-            <span style={{ color: "#93c5fd" }}>TOTAL GENERAL</span>
-            <strong style={{ color: "#fff", fontSize: "1.3rem" }}>
-              ${totalGen.toLocaleString("es-AR")}
-            </strong>
-          </div>
-        )}
-
-        <button
-          className="btn btn-primary"
-          onClick={guardarPresupuesto}
-          disabled={guardando}
-          style={{ width: "100%", padding: "0.75rem", fontSize: "1rem" }}
-        >
-          {guardando
-            ? "Guardando..."
-            : editId
-              ? "💾 Guardar cambios"
-              : "💾 Guardar presupuesto"}
-        </button>
-      </>
+      </div>
     );
   }
 
   // ── VISTA LISTA ────────────────────────────────────────────
   return (
-    <>
+    <div className="md-layout">
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "1.5rem",
+          gap: "0.75rem",
+          marginBottom: "0.75rem",
+          flexShrink: 0,
         }}
       >
-        <h1 style={{ margin: 0 }}>📋 Presupuestos</h1>
+        <input
+          placeholder="Buscar..."
+          value={filtroCliente}
+          onChange={(e) => setFiltroCliente(e.target.value)}
+          style={{ flex: 1, margin: 0 }}
+        />
         {!soloLectura && (
           <button
             className="btn btn-primary"
+            style={{ whiteSpace: "nowrap", flexShrink: 0 }}
             onClick={() => {
               setForm(FORM_VACIO);
               setItemsMat([]);
@@ -1431,17 +1914,11 @@ export default function Presupuestos({ perfil, soloLectura }) {
         )}
       </div>
 
-      <div style={{ marginBottom: "1rem" }}>
-        <input
-          placeholder="Buscar por cliente..."
-          value={filtroCliente}
-          onChange={(e) => setFiltroCliente(e.target.value)}
-        />
-      </div>
-
-      <div className="card">
+      <div className="md-list-area">
         {presupuestos.length === 0 ? (
-          <p style={{ color: "#888" }}>No hay presupuestos todavía</p>
+          <p style={{ color: "#888", padding: "1rem" }}>
+            No hay presupuestos todavía
+          </p>
         ) : (
           <table>
             <thead>
@@ -1450,13 +1927,14 @@ export default function Presupuestos({ perfil, soloLectura }) {
                 <th>Fecha</th>
                 <th>Estado</th>
                 <th>Total</th>
+                <th>Observaciones</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {presupuestosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ color: "#888" }}>
+                  <td colSpan="6" style={{ color: "#888" }}>
                     No se encontraron presupuestos
                   </td>
                 </tr>
@@ -1470,9 +1948,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                     <td>
                       {p.clientes ? (
                         <div>
-                          <strong>
-                            {p.clientes.apellido}, {p.clientes.nombre}
-                          </strong>
+                          {p.clientes.apellido}, {p.clientes.nombre}
                           <div style={{ fontSize: "0.8rem", color: "#888" }}>
                             #{p.numero}
                           </div>
@@ -1483,11 +1959,8 @@ export default function Presupuestos({ perfil, soloLectura }) {
                     </td>
                     <td>{p.fecha}</td>
                     <td>{badgeEstado(p.estado)}</td>
-                    <td>
-                      <strong>
-                        ${parseFloat(p.total).toLocaleString("es-AR")}
-                      </strong>
-                    </td>
+                    <td>${parseFloat(p.total).toLocaleString("es-AR")}</td>
+                    <td style={{ color: "#888" }}>{p.observaciones || "—"}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: "flex", gap: "0.25rem" }}>
                         <button
@@ -1497,15 +1970,6 @@ export default function Presupuestos({ perfil, soloLectura }) {
                         >
                           <IconoPDF />
                         </button>
-                        {!soloLectura && (
-                          <button
-                            className="btn btn-secondary"
-                            title="Editar"
-                            onClick={() => cargarParaEditar(p)}
-                          >
-                            <IconoEditar />
-                          </button>
-                        )}
                         {!soloLectura && (
                           <button
                             className="btn btn-danger"
@@ -1524,6 +1988,6 @@ export default function Presupuestos({ perfil, soloLectura }) {
           </table>
         )}
       </div>
-    </>
+    </div>
   );
 }

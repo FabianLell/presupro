@@ -105,15 +105,28 @@ Deno.serve(async (req) => {
       page += 1;
     }
 
-    const users = allUsers.map((u) => ({
-      id: u.id,
-      email: u.email,
-      created_at: u.created_at,
-      last_sign_in_at: u.last_sign_in_at,
-      nombre_taller: u.user_metadata?.nombre_taller || null,
-    }));
+    const userIds = allUsers.map((u) => u.id);
 
-    return new Response(JSON.stringify({ users }), {
+const { data: perfiles } = await adminClient
+  .from("perfil")
+  .select("user_id, nombre_negocio, estado, fecha_inicio_prueba")
+  .in("user_id", userIds);
+
+const mapaPerfiles: Record<string, any> = {};
+(perfiles || []).forEach((p: any) => {
+  mapaPerfiles[p.user_id] = p;
+});
+
+const users = allUsers.map((u) => ({
+  id: u.id,
+  email: u.email,
+  created_at: u.created_at,
+  last_sign_in_at: u.last_sign_in_at,
+  nombre_negocio: mapaPerfiles[u.id]?.nombre_negocio || u.user_metadata?.nombre_negocio || null,
+  perfil: mapaPerfiles[u.id] || null,
+}));
+
+return new Response(JSON.stringify({ users }), {
       status: 200,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
