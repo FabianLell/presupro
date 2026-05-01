@@ -216,6 +216,9 @@ export default function Onboarding({ onComplete }) {
             gridTemplateColumns: "1fr 1fr",
             gap: "0.75rem",
             marginBottom: "1.5rem",
+            maxHeight: "45vh",
+            overflowY: "auto",
+            paddingRight: "0.5rem",
           }}
         >
           {rubros.map((r) => {
