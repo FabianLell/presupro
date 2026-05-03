@@ -57,6 +57,8 @@ export default function App() {
   });
   const [cantPresupuestos, setCantPresupuestos] = useState(0);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [showMobileNotice, setShowMobileNotice] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   const [abierto, setAbierto] = useState(false);
   const [pinned, setPinned] = useState(
@@ -64,6 +66,25 @@ export default function App() {
   );
 
   const sidebarRef = useRef(null);
+
+  // Detectar dispositivo móvil y mostrar aviso
+  useEffect(() => {
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent,
+      ) ||
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+
+    setIsMobileDevice(isMobile);
+
+    // Mostrar aviso solo si es móvil y no se ha cerrado antes
+    if (isMobile) {
+      const noticeDismissed = localStorage.getItem("mobileNoticeDismissed");
+      if (!noticeDismissed) {
+        setShowMobileNotice(true);
+      }
+    }
+  }, []);
 
   // Cerrar sidebar al hacer click fuera (solo en modo temporal)
   useEffect(() => {
@@ -75,7 +96,7 @@ export default function App() {
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [abierto, pinned]);
+  }, [pinned, abierto]);
 
   function togglePin() {
     const nuevo = !pinned;
@@ -227,6 +248,11 @@ export default function App() {
   async function confirmarLogout() {
     await supabase.auth.signOut();
     setConfirmLogout(false);
+  }
+
+  function dismissMobileNotice() {
+    setShowMobileNotice(false);
+    localStorage.setItem("mobileNoticeDismissed", "true");
   }
 
   if (cargando)
@@ -543,6 +569,57 @@ export default function App() {
                   Cancelar
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Banner de aviso para dispositivos móviles */}
+        {showMobileNotice && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              background: "#2563eb",
+              color: "#fff",
+              padding: "12px 16px",
+              textAlign: "center",
+              fontSize: "14px",
+              zIndex: 1000,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                maxWidth: "1200px",
+                margin: "0 auto",
+              }}
+            >
+              <span style={{ flex: 1, textAlign: "center" }}>
+                📱 Esta app está optimizada para PC. Podés usar zoom o activar
+                'vista de escritorio' para mejor experiencia.
+              </span>
+              <button
+                onClick={dismissMobileNotice}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#fff",
+                  fontSize: "18px",
+                  cursor: "pointer",
+                  padding: "4px 8px",
+                  marginLeft: "12px",
+                  borderRadius: "4px",
+                  lineHeight: "1",
+                }}
+                title="Cerrar aviso"
+              >
+                ×
+              </button>
             </div>
           </div>
         )}

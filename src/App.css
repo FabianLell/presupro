@@ -836,3 +836,115 @@ td .btn {
   transform: scale(1.08);
   box-shadow: 0 4px 12px rgba(44, 123, 229, 0.4);
 }
+
+/* ── MEJORAS PARA DISPOSITIVOS MÓVILES ───────────── */
+
+/* Detectar dispositivo móvil por user agent y aplicar ajustes */
+@media (hover: none) and (pointer: coarse) {
+  /* Aumentar tamaño de texto para mejor legibilidad */
+  body {
+    font-size: 16px; /* Base más grande para mobile */
+  }
+  
+  /* Aumentar tamaño de botones principales para mejor tactilidad */
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+    min-height: 44px; /* Mínimo recomendado para tactilidad */
+  }
+  
+  /* Botones del sidebar más grandes */
+  .sidebar-btn {
+    padding: 0.8rem 0.75rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  
+  /* Botones de acción más grandes */
+  .btn-primary,
+  .btn-danger,
+  .btn-secondary {
+    padding: 0.7rem 1.3rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  
+  /* Inputs y selects más grandes */
+  input,
+  textarea,
+  select {
+    padding: 0.7rem 0.8rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+  
+  /* Botones de iconos más grandes */
+  .btn-plus {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+  
+  /* Asegurar que los botones en tablas sean tocables */
+  td .btn {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.9rem;
+    min-height: 40px;
+  }
+  
+  /* Modal footer con botones más grandes */
+  .modal-footer .btn {
+    padding: 0.8rem 1.2rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  
+  /* Header más grande */
+  .main-header {
+    min-height: 64px;
+    padding: 1rem;
+  }
+  
+  .header-titulo {
+    font-size: 1.6rem;
+  }
+  
+  /* Sidebar más accesible */
+  .sidebar {
+    width: 250px;
+    min-width: 250px;
+  }
+  
+  .sidebar.colapsado {
+    width: 70px;
+    min-width: 70px;
+  }
+  
+  /* Asegurar que el sidebar no quede inaccesible */
+  .sidebar-toggle button {
+    min-height: 44px;
+    padding: 0.5rem;
+  }
+  
+  /* Mejorar espaciado en formularios */
+  .form-row {
+    gap: 0.75rem;
+  }
+  
+  /* Cards con más padding */
+  .card {
+    padding: 1rem;
+  }
+  
+  /* Lista items más grandes */
+  .md-list-area tbody td {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Badges más grandes */
+  .badge {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
