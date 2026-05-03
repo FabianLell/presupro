@@ -22,7 +22,6 @@ const SECCIONES = [
   { id: "clientes", label: "Clientes", icono: "👤" },
   { id: "materiales", label: "Materiales", icono: "🔩" },
   { id: "servicios", label: "Servicios", icono: "🔧" },
-  { id: "perfil", label: "Editar perfil", icono: "⚙️" },
 ];
 
 const TITULO_SECCION = {
@@ -246,22 +245,34 @@ export default function App() {
         className={`sidebar ${colapsado ? "colapsado" : ""}`}
       >
         {/* Toggle + Pin */}
-        <div className="sidebar-toggle">
-          {!colapsado && (
-            <button
-              onClick={togglePin}
-              title={pinned ? "Desfijar sidebar" : "Fijar sidebar"}
-              style={{ color: pinned ? "#2563eb" : "#888" }}
-            >
-              📌
-            </button>
-          )}
+        <div
+          className="sidebar-toggle"
+          style={{
+            display: "flex",
+            justifyContent: colapsado ? "center" : "space-between",
+            width: "100%",
+          }}
+        >
           <button
             onClick={() => setAbierto(!abierto)}
             title={colapsado ? "Abrir menú" : "Cerrar menú"}
           >
-            {colapsado ? "☰" : "✕"}
+            ☰
           </button>
+          {!colapsado && (
+            <button
+              onClick={togglePin}
+              title={pinned ? "Desfijar sidebar" : "Fijar sidebar"}
+              style={{
+                color: pinned ? "#2563eb" : "#888",
+                backgroundColor: pinned ? "#1e3a5f" : "transparent",
+                border: pinned ? "1px solid #2563eb" : "1px solid transparent",
+                fontWeight: pinned ? "bold" : "normal",
+              }}
+            >
+              📌
+            </button>
+          )}
         </div>
 
         {/* Perfil del negocio */}

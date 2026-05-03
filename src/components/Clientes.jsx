@@ -325,7 +325,7 @@ export default function Clientes({ soloLectura }) {
                   onClick={() => seleccionar(c)}
                 >
                   <td>
-                    <strong>{c.apellido}</strong>, {c.nombre}
+                    {c.apellido}, {c.nombre}
                     {c.direccion && (
                       <div style={{ fontSize: "0.75rem", color: "#888" }}>
                         {c.direccion}
