@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase, calcularEstadoCuenta } from "./supabase";
 import "./App.css";
+import { DirtyFormProvider } from "./contexts/DirtyFormContext";
+import { DirtyFormModal } from "./components/DirtyFormModal";
 import Login from "./components/Login";
 import Registro from "./components/Registro";
 import ResetPassword from "./components/ResetPassword";
@@ -45,6 +47,14 @@ export default function App() {
     soloLectura: false,
     mensaje: "",
   });
+
+  // Estado para protección de datos
+  const [dirtyFormConfig, setDirtyFormConfig] = useState({
+    show: false,
+    onSave: null,
+    onDiscard: null,
+    onCancel: null,
+  });
   const [cantPresupuestos, setCantPresupuestos] = useState(0);
 
   const [abierto, setAbierto] = useState(false);
@@ -73,9 +83,67 @@ export default function App() {
     if (!nuevo) setAbierto(false);
   }
 
+  // Funciones para manejar protección de datos
+  const showDirtyFormModal = (onSave, onDiscard, onCancel) => {
+    setDirtyFormConfig({
+      show: true,
+      onSave,
+      onDiscard,
+      onCancel,
+    });
+  };
+
+  const hideDirtyFormModal = () => {
+    setDirtyFormConfig({
+      show: false,
+      onSave: null,
+      onDiscard: null,
+      onCancel: null,
+    });
+  };
+
+  // Hacer las funciones accesibles globalmente para componentes
+  useEffect(() => {
+    window.showDirtyFormModal = showDirtyFormModal;
+    window.hideDirtyFormModal = hideDirtyFormModal;
+    return () => {
+      window.showDirtyFormModal = null;
+      window.hideDirtyFormModal = null;
+    };
+  }, [showDirtyFormModal, hideDirtyFormModal]);
+
+  // Función de navegación con protección
   function navegarA(id) {
-    setSeccion(id);
-    if (!pinned) setTimeout(() => setAbierto(false), 150);
+    // Verificar si hay un formulario con cambios sin guardar
+    if (window.currentDirtyForm && window.currentDirtyForm.isDirty) {
+      showDirtyFormModal(
+        async () => {
+          // Guardar
+          if (window.currentDirtyForm.onSave) {
+            await window.currentDirtyForm.onSave();
+          }
+          window.currentDirtyForm = null; // Limpiar estado global
+          // No llamar hideDirtyFormModal() aquí, el modal se cierra automáticamente
+          setSeccion(id);
+          if (!pinned) setTimeout(() => setAbierto(false), 150);
+        },
+        () => {
+          // Descartar
+          window.currentDirtyForm = null; // Limpiar estado global
+          // No llamar hideDirtyFormModal() aquí, el modal se cierra automáticamente
+          setSeccion(id);
+          if (!pinned) setTimeout(() => setAbierto(false), 150);
+        },
+        () => {
+          // Cancelar - el modal se cierra automáticamente
+          // No limpiar window.currentDirtyForm aquí porque cancelar significa mantener los cambios
+        },
+      );
+    } else {
+      // Navegación normal
+      setSeccion(id);
+      if (!pinned) setTimeout(() => setAbierto(false), 150);
+    }
   }
 
   useEffect(() => {
@@ -238,199 +306,212 @@ export default function App() {
   const colapsado = !abierto && !pinned;
 
   return (
-    <div className="app">
-      {/* ── SIDEBAR ── */}
-      <nav
-        ref={sidebarRef}
-        className={`sidebar ${colapsado ? "colapsado" : ""}`}
-      >
-        {/* Toggle + Pin */}
-        <div
-          className="sidebar-toggle"
-          style={{
-            display: "flex",
-            justifyContent: colapsado ? "center" : "space-between",
-            width: "100%",
-          }}
+    <DirtyFormProvider>
+      <div className="app">
+        {/* ── SIDEBAR ── */}
+        <nav
+          ref={sidebarRef}
+          className={`sidebar ${colapsado ? "colapsado" : ""}`}
         >
-          <button
-            onClick={() => setAbierto(!abierto)}
-            title={colapsado ? "Abrir menú" : "Cerrar menú"}
+          {/* Toggle + Pin */}
+          <div
+            className="sidebar-toggle"
+            style={{
+              display: "flex",
+              justifyContent: colapsado ? "center" : "space-between",
+              width: "100%",
+            }}
           >
-            ☰
-          </button>
-          {!colapsado && (
             <button
-              onClick={togglePin}
-              title={pinned ? "Desfijar sidebar" : "Fijar sidebar"}
-              style={{
-                color: pinned ? "#2563eb" : "#888",
-                backgroundColor: pinned ? "#1e3a5f" : "transparent",
-                border: pinned ? "1px solid #2563eb" : "1px solid transparent",
-                fontWeight: pinned ? "bold" : "normal",
-              }}
+              onClick={() => setAbierto(!abierto)}
+              title={colapsado ? "Abrir menú" : "Cerrar menú"}
             >
-              📌
+              ☰
             </button>
-          )}
-        </div>
+            {!colapsado && (
+              <button
+                onClick={togglePin}
+                title={pinned ? "Desfijar sidebar" : "Fijar sidebar"}
+                style={{
+                  color: pinned ? "#2563eb" : "#888",
+                  backgroundColor: pinned ? "#1e3a5f" : "transparent",
+                  border: pinned
+                    ? "1px solid #2563eb"
+                    : "1px solid transparent",
+                  fontWeight: pinned ? "bold" : "normal",
+                }}
+              >
+                📌
+              </button>
+            )}
+          </div>
 
-        {/* Perfil del negocio */}
-        <div className="sidebar-perfil">
-          <LogoNegocio size={colapsado ? 32 : 44} />
-          {!colapsado && (
-            <span className="sidebar-perfil-nombre">{nombreNegocio}</span>
-          )}
-        </div>
+          {/* Perfil del negocio */}
+          <div className="sidebar-perfil">
+            <LogoNegocio size={colapsado ? 32 : 44} />
+            {!colapsado && (
+              <span className="sidebar-perfil-nombre">{nombreNegocio}</span>
+            )}
+          </div>
 
-        {/* Navegación */}
-        <div className="sidebar-nav">
-          <button
-            className={`sidebar-btn ${seccion === "perfil" ? "active" : ""}`}
-            onClick={() => navegarA("perfil")}
-            data-tooltip="Editar perfil"
-          >
-            <span className="btn-icon">⚙️</span>
-            <span className="btn-label">Editar perfil</span>
-          </button>
-
-          <div className="sidebar-separator" />
-
-          {SECCIONES.map((s) => (
+          {/* Navegación */}
+          <div className="sidebar-nav">
             <button
-              key={s.id}
-              className={`sidebar-btn ${seccion === s.id ? "active" : ""}`}
-              onClick={() => navegarA(s.id)}
-              data-tooltip={s.label}
+              className={`sidebar-btn ${seccion === "perfil" ? "active" : ""}`}
+              onClick={() => navegarA("perfil")}
+              data-tooltip="Editar perfil"
             >
-              <span className="btn-icon">{s.icono}</span>
-              <span className="btn-label">{s.label}</span>
+              <span className="btn-icon">⚙️</span>
+              <span className="btn-label">Editar perfil</span>
             </button>
-          ))}
 
-          {isAdmin && (
-            <button
-              className={`sidebar-btn ${seccion === "admin" ? "active" : ""}`}
-              onClick={() => navegarA("admin")}
-              data-tooltip="Admin"
-            >
-              <span className="btn-icon">🛡️</span>
-              <span className="btn-label">Admin</span>
-            </button>
-          )}
+            <div className="sidebar-separator" />
 
-          {!estadoCuenta.soloLectura &&
-            estadoCuenta.diasRestantes !== undefined && (
+            {SECCIONES.map((s) => (
+              <button
+                key={s.id}
+                className={`sidebar-btn ${seccion === s.id ? "active" : ""}`}
+                onClick={() => navegarA(s.id)}
+                data-tooltip={s.label}
+              >
+                <span className="btn-icon">{s.icono}</span>
+                <span className="btn-label">{s.label}</span>
+              </button>
+            ))}
+
+            {isAdmin && (
+              <button
+                className={`sidebar-btn ${seccion === "admin" ? "active" : ""}`}
+                onClick={() => navegarA("admin")}
+                data-tooltip="Admin"
+              >
+                <span className="btn-icon">🛡️</span>
+                <span className="btn-label">Admin</span>
+              </button>
+            )}
+
+            {!estadoCuenta.soloLectura &&
+              estadoCuenta.diasRestantes !== undefined && (
+                <div
+                  className="prueba-aviso"
+                  style={{
+                    background:
+                      estadoCuenta.diasRestantes <= 5 ||
+                      estadoCuenta.presupuestosRestantes <= 5
+                        ? "#450a0a"
+                        : "#1a1a1a",
+                    border: `1px solid ${estadoCuenta.diasRestantes <= 5 || estadoCuenta.presupuestosRestantes <= 5 ? "#dc2626" : "#2a2a2a"}`,
+                    color:
+                      estadoCuenta.diasRestantes <= 5 ||
+                      estadoCuenta.presupuestosRestantes <= 5
+                        ? "#f87171"
+                        : "#888",
+                    marginTop: "0.5rem",
+                  }}
+                >
+                  <div>⏱ {estadoCuenta.diasRestantes} días restantes</div>
+                  <div>
+                    📋 {estadoCuenta.presupuestosRestantes} presupuestos
+                    restantes
+                  </div>
+                </div>
+              )}
+
+            {estadoCuenta.soloLectura && (
               <div
                 className="prueba-aviso"
                 style={{
-                  background:
-                    estadoCuenta.diasRestantes <= 5 ||
-                    estadoCuenta.presupuestosRestantes <= 5
-                      ? "#450a0a"
-                      : "#1a1a1a",
-                  border: `1px solid ${estadoCuenta.diasRestantes <= 5 || estadoCuenta.presupuestosRestantes <= 5 ? "#dc2626" : "#2a2a2a"}`,
-                  color:
-                    estadoCuenta.diasRestantes <= 5 ||
-                    estadoCuenta.presupuestosRestantes <= 5
-                      ? "#f87171"
-                      : "#888",
+                  background: "#450a0a",
+                  border: "1px solid #dc2626",
+                  color: "#f87171",
                   marginTop: "0.5rem",
                 }}
               >
-                <div>⏱ {estadoCuenta.diasRestantes} días restantes</div>
-                <div>
-                  📋 {estadoCuenta.presupuestosRestantes} presupuestos restantes
+                <div style={{ fontWeight: 600, marginBottom: "0.2rem" }}>
+                  ⛔ Acceso limitado
+                </div>
+                <div style={{ color: "#fca5a5", fontSize: "0.72rem" }}>
+                  {estadoCuenta.mensaje}
                 </div>
               </div>
             )}
+          </div>
 
-          {estadoCuenta.soloLectura && (
-            <div
-              className="prueba-aviso"
-              style={{
-                background: "#450a0a",
-                border: "1px solid #dc2626",
-                color: "#f87171",
-                marginTop: "0.5rem",
-              }}
+          {/* Footer */}
+          <div className="sidebar-footer">
+            <button
+              className="sidebar-btn danger"
+              onClick={handleLogout}
+              data-tooltip="Cerrar sesión"
             >
-              <div style={{ fontWeight: 600, marginBottom: "0.2rem" }}>
-                ⛔ Acceso limitado
-              </div>
-              <div style={{ color: "#fca5a5", fontSize: "0.72rem" }}>
-                {estadoCuenta.mensaje}
-              </div>
+              <span className="btn-icon">🚪</span>
+              <span className="btn-label">Cerrar sesión</span>
+            </button>
+          </div>
+        </nav>
+
+        {/* ── MAIN ── */}
+        <div className="main-wrapper">
+          {/* Header */}
+          <header className="main-header">
+            <div className="header-left">
+              <img
+                src="/logo-app.png"
+                alt="PresuPro"
+                style={{ height: "36px", objectFit: "contain" }}
+              />
             </div>
-          )}
-        </div>
+            <div className="header-titulo">
+              {SECCIONES.find((s) => s.id === seccion)?.icono && (
+                <span>{SECCIONES.find((s) => s.id === seccion)?.icono}</span>
+              )}
+              {TITULO_SECCION[seccion] || ""}
+            </div>
+            <div className="header-right">
+              <LogoNegocio size={36} />
+              <span
+                className="header-negocio-nombre"
+                style={{ fontSize: "1rem", fontWeight: 600, color: "#f0f0f0" }}
+              >
+                {nombreNegocio}
+              </span>
+            </div>
+          </header>
 
-        {/* Footer */}
-        <div className="sidebar-footer">
-          <button
-            className="sidebar-btn danger"
-            onClick={handleLogout}
-            data-tooltip="Cerrar sesión"
+          {/* Contenido */}
+          <div
+            className={`main-content ${seccion === "perfil" || seccion === "presupuestos" ? "con-scroll" : ""}`}
           >
-            <span className="btn-icon">🚪</span>
-            <span className="btn-label">Cerrar sesión</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* ── MAIN ── */}
-      <div className="main-wrapper">
-        {/* Header */}
-        <header className="main-header">
-          <div className="header-left">
-            <img
-              src="/logo-app.png"
-              alt="PresuPro"
-              style={{ height: "36px", objectFit: "contain" }}
-            />
-          </div>
-          <div className="header-titulo">
-            {SECCIONES.find((s) => s.id === seccion)?.icono && (
-              <span>{SECCIONES.find((s) => s.id === seccion)?.icono}</span>
+            {seccion === "presupuestos" && (
+              <Presupuestos
+                perfil={perfil}
+                soloLectura={estadoCuenta.soloLectura}
+              />
             )}
-            {TITULO_SECCION[seccion] || ""}
+            {seccion === "materiales" && (
+              <Materiales soloLectura={estadoCuenta.soloLectura} />
+            )}
+            {seccion === "servicios" && (
+              <Servicios soloLectura={estadoCuenta.soloLectura} />
+            )}
+            {seccion === "clientes" && (
+              <Clientes soloLectura={estadoCuenta.soloLectura} />
+            )}
+            {seccion === "perfil" && (
+              <Perfil onPerfilActualizado={cargarPerfil} />
+            )}
+            {isAdmin && seccion === "admin" && <Admin />}
           </div>
-          <div className="header-right">
-            <LogoNegocio size={36} />
-            <span
-              className="header-negocio-nombre"
-              style={{ fontSize: "1rem", fontWeight: 600, color: "#f0f0f0" }}
-            >
-              {nombreNegocio}
-            </span>
-          </div>
-        </header>
-
-        {/* Contenido */}
-        <div
-          className={`main-content ${seccion === "perfil" || seccion === "presupuestos" ? "con-scroll" : ""}`}
-        >
-          {seccion === "presupuestos" && (
-            <Presupuestos
-              perfil={perfil}
-              soloLectura={estadoCuenta.soloLectura}
-            />
-          )}
-          {seccion === "materiales" && (
-            <Materiales soloLectura={estadoCuenta.soloLectura} />
-          )}
-          {seccion === "servicios" && (
-            <Servicios soloLectura={estadoCuenta.soloLectura} />
-          )}
-          {seccion === "clientes" && (
-            <Clientes soloLectura={estadoCuenta.soloLectura} />
-          )}
-          {seccion === "perfil" && (
-            <Perfil onPerfilActualizado={cargarPerfil} />
-          )}
-          {isAdmin && seccion === "admin" && <Admin />}
         </div>
+
+        {/* Modal de protección de datos */}
+        <DirtyFormModal
+          show={dirtyFormConfig.show}
+          onSave={dirtyFormConfig.onSave}
+          onDiscard={dirtyFormConfig.onDiscard}
+          onCancel={dirtyFormConfig.onCancel}
+        />
       </div>
-    </div>
+    </DirtyFormProvider>
   );
 }

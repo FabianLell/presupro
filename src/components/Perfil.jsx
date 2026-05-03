@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase, getUserId } from "../supabase";
 import Onboarding from "./Onboarding";
+import { useDirtyForm } from "../hooks/useDirtyForm";
 
 const VACIO = {
   nombre_negocio: "",
@@ -26,6 +27,25 @@ export default function Perfil({ onPerfilActualizado }) {
   const [procesandoRubros, setProcesandoRubros] = useState(false);
   const [okRubros, setOkRubros] = useState("");
 
+  // Hook de protección contra pérdida de datos
+  const dirtyForm = useDirtyForm(VACIO, async () => {
+    await guardar();
+  });
+
+  // Registrar estado del formulario con sistema global
+  useEffect(() => {
+    if (dirtyForm.isDirty) {
+      window.currentDirtyForm = {
+        isDirty: dirtyForm.isDirty,
+        onSave: async () => {
+          await guardar();
+        },
+      };
+    } else {
+      window.currentDirtyForm = null;
+    }
+  }, [dirtyForm.isDirty]);
+
   useEffect(() => {
     cargar();
   }, []);
@@ -39,7 +59,10 @@ export default function Perfil({ onPerfilActualizado }) {
       .eq("user_id", userId)
       .single();
     if (data) {
-      setForm({ ...VACIO, ...data });
+      const perfilForm = { ...VACIO, ...data };
+      setForm(perfilForm);
+      dirtyForm.updateData(perfilForm);
+      dirtyForm.markAsClean();
       setRubrosSeleccionados(data.rubros_seleccionados || []);
     }
     await cargarRubros();
@@ -161,7 +184,9 @@ export default function Perfil({ onPerfilActualizado }) {
   }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const newForm = { ...form, [e.target.name]: e.target.value };
+    setForm(newForm);
+    dirtyForm.updateData(newForm);
   }
 
   async function subirLogo(file) {
@@ -202,8 +227,24 @@ export default function Perfil({ onPerfilActualizado }) {
   async function guardar() {
     setError("");
     setOk("");
-    if (!form.nombre_negocio?.trim()) {
-      return setError("El Nombre del negocio es obligatorio");
+
+    // Obtener datos del hook si el componente está vacío
+    let currentForm = form;
+    if (dirtyForm.currentData && dirtyForm.currentData.nombre_negocio) {
+      currentForm = {
+        nombre_negocio: dirtyForm.currentData.nombre_negocio || "",
+        direccion: dirtyForm.currentData.direccion || "",
+        telefono: dirtyForm.currentData.telefono || "",
+        cuil_cuit: dirtyForm.currentData.cuil_cuit || "",
+        email_contacto: dirtyForm.currentData.email_contacto || "",
+        leyenda_presupuesto: dirtyForm.currentData.leyenda_presupuesto || "",
+        logo_url: dirtyForm.currentData.logo_url || "",
+      };
+    }
+
+    if (!currentForm.nombre_negocio?.trim()) {
+      setError("El Nombre del negocio es obligatorio");
+      throw new Error("El Nombre del negocio es obligatorio");
     }
 
     setGuardando(true);
@@ -211,13 +252,13 @@ export default function Perfil({ onPerfilActualizado }) {
 
     const datos = {
       user_id: userId,
-      nombre_negocio: form.nombre_negocio.trim(),
-      direccion: form.direccion?.trim() || null,
-      telefono: form.telefono?.trim() || null,
-      cuil_cuit: form.cuil_cuit?.trim() || null,
-      email_contacto: form.email_contacto?.trim() || null,
-      leyenda_presupuesto: form.leyenda_presupuesto?.trim() || null,
-      logo_url: form.logo_url || null,
+      nombre_negocio: currentForm.nombre_negocio.trim(),
+      direccion: currentForm.direccion?.trim() || null,
+      telefono: currentForm.telefono?.trim() || null,
+      cuil_cuit: currentForm.cuil_cuit?.trim() || null,
+      email_contacto: currentForm.email_contacto?.trim() || null,
+      leyenda_presupuesto: currentForm.leyenda_presupuesto?.trim() || null,
+      logo_url: currentForm.logo_url || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -227,8 +268,10 @@ export default function Perfil({ onPerfilActualizado }) {
 
     if (error) {
       setError("Error al guardar el perfil");
+      throw new Error("Error al guardar el perfil");
     } else {
       setOk("Perfil guardado correctamente");
+      dirtyForm.markAsClean();
       if (onPerfilActualizado) onPerfilActualizado();
     }
 

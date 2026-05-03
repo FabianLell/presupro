@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase, getUserId } from "../supabase";
+import { useDirtyForm } from "../hooks/useDirtyForm";
 
 const VACIO = {
   nombre: "",
@@ -57,6 +58,27 @@ export default function Clientes({ soloLectura }) {
   const [busqueda, setBusqueda] = useState("");
   const [confirmEliminar, setConfirmEliminar] = useState(null);
 
+  // Hook de protección contra pérdida de datos
+  const dirtyForm = useDirtyForm(VACIO, async () => {
+    if (modoEdicion) {
+      await guardar();
+    }
+  });
+
+  // Registrar estado del formulario con sistema global
+  useEffect(() => {
+    if (dirtyForm.isDirty && modoEdicion) {
+      window.currentDirtyForm = {
+        isDirty: dirtyForm.isDirty,
+        onSave: async () => {
+          await guardar();
+        },
+      };
+    } else {
+      window.currentDirtyForm = null;
+    }
+  }, [dirtyForm.isDirty, modoEdicion]);
+
   useEffect(() => {
     cargar();
   }, []);
@@ -73,12 +95,41 @@ export default function Clientes({ soloLectura }) {
   }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const newForm = { ...form, [e.target.name]: e.target.value };
+    setForm(newForm);
+    dirtyForm.updateData(newForm);
   }
 
   function seleccionar(c) {
+    // Verificar si hay cambios sin guardar antes de seleccionar
+    if (dirtyForm.isDirty && modoEdicion) {
+      // Mostrar confirmación usando el sistema global
+      if (window.showDirtyFormModal) {
+        window.showDirtyFormModal(
+          async () => {
+            // Guardar
+            await guardar();
+            // Luego seleccionar el cliente
+            doSeleccionar(c);
+          },
+          () => {
+            // Descartar
+            doSeleccionar(c);
+          },
+          () => {
+            // Cancelar - no hacer nada
+          },
+        );
+      }
+    } else {
+      // Si no hay cambios, seleccionar normalmente
+      doSeleccionar(c);
+    }
+  }
+
+  function doSeleccionar(c) {
     setSelId(c.id);
-    setForm({
+    const clienteForm = {
       nombre: c.nombre,
       apellido: c.apellido,
       telefono: c.telefono || "",
@@ -86,7 +137,10 @@ export default function Clientes({ soloLectura }) {
       cuil_cuit: c.cuil_cuit || "",
       email: c.email || "",
       direccion: c.direccion || "",
-    });
+    };
+    setForm(clienteForm);
+    dirtyForm.updateData(clienteForm);
+    dirtyForm.markAsClean();
     setModoEdicion(false);
     setEsNuevo(false);
     setError("");
@@ -96,6 +150,8 @@ export default function Clientes({ soloLectura }) {
   function nuevo() {
     setSelId(null);
     setForm(VACIO);
+    dirtyForm.updateData(VACIO);
+    dirtyForm.markAsClean();
     setModoEdicion(true);
     setEsNuevo(true);
     setError("");
@@ -120,19 +176,40 @@ export default function Clientes({ soloLectura }) {
   async function guardar() {
     setError("");
     setOk("");
-    if (!form.nombre.trim()) return setError("El nombre es obligatorio");
-    if (!form.apellido.trim()) return setError("El apellido es obligatorio");
+
+    // Obtener datos del hook si el componente está vacío
+    let currentForm = form;
+    if (dirtyForm.currentData && dirtyForm.currentData.nombre) {
+      currentForm = {
+        nombre: dirtyForm.currentData.nombre || "",
+        apellido: dirtyForm.currentData.apellido || "",
+        telefono: dirtyForm.currentData.telefono || "",
+        dni: dirtyForm.currentData.dni || "",
+        cuil_cuit: dirtyForm.currentData.cuil_cuit || "",
+        email: dirtyForm.currentData.email || "",
+        direccion: dirtyForm.currentData.direccion || "",
+      };
+    }
+
+    if (!currentForm.nombre.trim()) {
+      setError("El nombre es obligatorio");
+      throw new Error("El nombre es obligatorio");
+    }
+    if (!currentForm.apellido.trim()) {
+      setError("El apellido es obligatorio");
+      throw new Error("El apellido es obligatorio");
+    }
 
     const userId = await getUserId();
     const datos = {
       user_id: userId,
-      nombre: form.nombre.trim(),
-      apellido: form.apellido.trim(),
-      telefono: form.telefono.trim(),
-      dni: form.dni.trim(),
-      cuil_cuit: form.cuil_cuit.trim(),
-      email: form.email.trim(),
-      direccion: form.direccion.trim(),
+      nombre: currentForm.nombre.trim(),
+      apellido: currentForm.apellido.trim(),
+      telefono: currentForm.telefono.trim(),
+      dni: currentForm.dni.trim(),
+      cuil_cuit: currentForm.cuil_cuit.trim(),
+      email: currentForm.email.trim(),
+      direccion: currentForm.direccion.trim(),
     };
 
     if (!esNuevo && selId) {
@@ -140,20 +217,28 @@ export default function Clientes({ soloLectura }) {
         .from("clientes")
         .update(datos)
         .eq("id", selId);
-      if (error) return setError("Error al actualizar");
+      if (error) {
+        setError("Error al actualizar");
+        throw new Error("Error al actualizar");
+      }
       setOk("Cliente actualizado");
       setModoEdicion(false);
+      dirtyForm.markAsClean();
     } else {
       const { data, error } = await supabase
         .from("clientes")
         .insert([datos])
         .select()
         .single();
-      if (error) return setError("Error al guardar");
+      if (error) {
+        setError("Error al guardar");
+        throw new Error("Error al guardar");
+      }
       setOk("Cliente agregado");
       setEsNuevo(false);
       setModoEdicion(false);
       setSelId(data.id);
+      dirtyForm.markAsClean();
     }
     await cargar();
   }

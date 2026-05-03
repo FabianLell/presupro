@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase, getUserId } from "../supabase";
+import { useDirtyForm } from "../hooks/useDirtyForm";
 
 const UNIDADES = [
   "unidad",
@@ -80,6 +81,27 @@ export default function Materiales({ soloLectura }) {
   const [formCategoria, setFormCategoria] = useState({ nombre: "" });
   const [okCategoria, setOkCategoria] = useState("");
 
+  // Hook de protección contra pérdida de datos
+  const dirtyForm = useDirtyForm(VACIO, async () => {
+    if (modoEdicion) {
+      await guardar();
+    }
+  });
+
+  // Registrar estado del formulario con sistema global
+  useEffect(() => {
+    if (dirtyForm.isDirty && modoEdicion) {
+      window.currentDirtyForm = {
+        isDirty: dirtyForm.isDirty,
+        onSave: async () => {
+          await guardar();
+        },
+      };
+    } else {
+      window.currentDirtyForm = null;
+    }
+  }, [dirtyForm.isDirty, modoEdicion]);
+
   useEffect(() => {
     cargar();
     cargarCategorias();
@@ -112,18 +134,45 @@ export default function Materiales({ soloLectura }) {
   }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const newForm = { ...form, [e.target.name]: e.target.value };
+    setForm(newForm);
+    dirtyForm.updateData(newForm);
   }
 
   function seleccionar(m) {
+    // Verificar si hay cambios sin guardar antes de seleccionar
+    if (dirtyForm.isDirty && modoEdicion) {
+      if (window.showDirtyFormModal) {
+        window.showDirtyFormModal(
+          async () => {
+            await guardar();
+            doSeleccionar(m);
+          },
+          () => {
+            doSeleccionar(m);
+          },
+          () => {
+            // Cancelar
+          },
+        );
+      }
+    } else {
+      doSeleccionar(m);
+    }
+  }
+
+  function doSeleccionar(m) {
     setSelId(m.id);
-    setForm({
+    const materialForm = {
       nombre: m.nombre,
       descripcion: m.descripcion || "",
       unidad: m.unidad,
       precio_unitario: m.precio_unitario || "",
       categoria_id: m.categoria_id || "",
-    });
+    };
+    setForm(materialForm);
+    dirtyForm.updateData(materialForm);
+    dirtyForm.markAsClean();
     setModoEdicion(false);
     setEsNuevo(false);
     setError("");
@@ -133,6 +182,8 @@ export default function Materiales({ soloLectura }) {
   function nuevo() {
     setSelId(null);
     setForm(VACIO);
+    dirtyForm.updateData(VACIO);
+    dirtyForm.markAsClean();
     setModoEdicion(true);
     setEsNuevo(true);
     setError("");
@@ -158,19 +209,36 @@ export default function Materiales({ soloLectura }) {
     setError("");
     setOk("");
 
-    if (!form.nombre.trim()) return setError("El nombre es obligatorio");
-    if (!form.precio_unitario || isNaN(form.precio_unitario))
-      return setError("El precio debe ser un número");
+    // Obtener datos del hook si el componente está vacío
+    let currentForm = form;
+    if (dirtyForm.currentData && dirtyForm.currentData.nombre) {
+      currentForm = {
+        nombre: dirtyForm.currentData.nombre || "",
+        descripcion: dirtyForm.currentData.descripcion || "",
+        unidad: dirtyForm.currentData.unidad || "",
+        precio_unitario: dirtyForm.currentData.precio_unitario || "",
+        categoria_id: dirtyForm.currentData.categoria_id || null,
+      };
+    }
+
+    if (!currentForm.nombre.trim()) {
+      setError("El nombre es obligatorio");
+      throw new Error("El nombre es obligatorio");
+    }
+    if (!currentForm.precio_unitario || isNaN(currentForm.precio_unitario)) {
+      setError("El precio debe ser un número");
+      throw new Error("El precio debe ser un número");
+    }
 
     const userId = await getUserId();
 
     const datos = {
       user_id: userId,
-      nombre: form.nombre.trim(),
-      descripcion: form.descripcion.trim(),
-      unidad: form.unidad,
-      precio_unitario: parseFloat(form.precio_unitario),
-      categoria_id: form.categoria_id || null,
+      nombre: currentForm.nombre.trim(),
+      descripcion: currentForm.descripcion.trim(),
+      unidad: currentForm.unidad,
+      precio_unitario: parseFloat(currentForm.precio_unitario),
+      categoria_id: currentForm.categoria_id || null,
     };
 
     if (!esNuevo && selId) {
@@ -179,9 +247,13 @@ export default function Materiales({ soloLectura }) {
         .update(datos)
         .eq("id", selId);
 
-      if (error) return setError("Error al actualizar");
+      if (error) {
+        setError("Error al actualizar");
+        throw new Error("Error al actualizar");
+      }
       setOk("Material actualizado");
       setModoEdicion(false);
+      dirtyForm.markAsClean();
     } else {
       const { data, error } = await supabase
         .from("materiales")
@@ -189,11 +261,15 @@ export default function Materiales({ soloLectura }) {
         .select()
         .single();
 
-      if (error) return setError("Error al guardar");
+      if (error) {
+        setError("Error al guardar");
+        throw new Error("Error al guardar");
+      }
       setOk("Material agregado");
       setEsNuevo(false);
       setModoEdicion(false);
       setSelId(data.id);
+      dirtyForm.markAsClean();
     }
 
     setForm(VACIO);

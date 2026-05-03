@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import { supabase, getUserId } from "../supabase";
+import { useDirtyForm } from "../hooks/useDirtyForm";
 
 const VACIO = { nombre: "", descripcion: "", precio: "" };
 
@@ -49,6 +50,27 @@ export default function Servicios({ soloLectura }) {
   const [busqueda, setBusqueda] = useState("");
   const [confirmEliminar, setConfirmEliminar] = useState(null);
 
+  // Hook de protección contra pérdida de datos
+  const dirtyForm = useDirtyForm(VACIO, async () => {
+    if (modoEdicion) {
+      await guardar();
+    }
+  });
+
+  // Registrar estado del formulario con sistema global
+  useEffect(() => {
+    if (dirtyForm.isDirty && modoEdicion) {
+      window.currentDirtyForm = {
+        isDirty: dirtyForm.isDirty,
+        onSave: async () => {
+          await guardar();
+        },
+      };
+    } else {
+      window.currentDirtyForm = null;
+    }
+  }, [dirtyForm.isDirty, modoEdicion]);
+
   useEffect(() => {
     cargar();
   }, []);
@@ -65,16 +87,43 @@ export default function Servicios({ soloLectura }) {
   }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const newForm = { ...form, [e.target.name]: e.target.value };
+    setForm(newForm);
+    dirtyForm.updateData(newForm);
   }
 
   function seleccionar(s) {
+    // Verificar si hay cambios sin guardar antes de seleccionar
+    if (dirtyForm.isDirty && modoEdicion) {
+      if (window.showDirtyFormModal) {
+        window.showDirtyFormModal(
+          async () => {
+            await guardar();
+            doSeleccionar(s);
+          },
+          () => {
+            doSeleccionar(s);
+          },
+          () => {
+            // Cancelar
+          },
+        );
+      }
+    } else {
+      doSeleccionar(s);
+    }
+  }
+
+  function doSeleccionar(s) {
     setSelId(s.id);
-    setForm({
+    const servicioForm = {
       nombre: s.nombre,
       descripcion: s.descripcion || "",
       precio: s.precio || "",
-    });
+    };
+    setForm(servicioForm);
+    dirtyForm.updateData(servicioForm);
+    dirtyForm.markAsClean();
     setModoEdicion(false);
     setEsNuevo(false);
     setError("");
@@ -84,6 +133,8 @@ export default function Servicios({ soloLectura }) {
   function nuevo() {
     setSelId(null);
     setForm(VACIO);
+    dirtyForm.updateData(VACIO);
+    dirtyForm.markAsClean();
     setModoEdicion(true);
     setEsNuevo(true);
     setError("");
@@ -108,16 +159,32 @@ export default function Servicios({ soloLectura }) {
   async function guardar() {
     setError("");
     setOk("");
-    if (!form.nombre.trim()) return setError("El nombre es obligatorio");
-    if (!form.precio || isNaN(form.precio))
-      return setError("El precio debe ser un número");
+
+    // Obtener datos del hook si el componente está vacío
+    let currentForm = form;
+    if (dirtyForm.currentData && dirtyForm.currentData.nombre) {
+      currentForm = {
+        nombre: dirtyForm.currentData.nombre || "",
+        descripcion: dirtyForm.currentData.descripcion || "",
+        precio: dirtyForm.currentData.precio || "",
+      };
+    }
+
+    if (!currentForm.nombre.trim()) {
+      setError("El nombre es obligatorio");
+      throw new Error("El nombre es obligatorio");
+    }
+    if (!currentForm.precio || isNaN(currentForm.precio)) {
+      setError("El precio debe ser un número");
+      throw new Error("El precio debe ser un número");
+    }
 
     const userId = await getUserId();
     const datos = {
       user_id: userId,
-      nombre: form.nombre.trim(),
-      descripcion: form.descripcion.trim(),
-      precio: parseFloat(form.precio),
+      nombre: currentForm.nombre.trim(),
+      descripcion: currentForm.descripcion.trim(),
+      precio: parseFloat(currentForm.precio),
     };
 
     if (!esNuevo && selId) {
@@ -125,20 +192,28 @@ export default function Servicios({ soloLectura }) {
         .from("servicios")
         .update(datos)
         .eq("id", selId);
-      if (error) return setError("Error al actualizar");
+      if (error) {
+        setError("Error al actualizar");
+        throw new Error("Error al actualizar");
+      }
       setOk("Servicio actualizado");
       setModoEdicion(false);
+      dirtyForm.markAsClean();
     } else {
       const { data, error } = await supabase
         .from("servicios")
         .insert([datos])
         .select()
         .single();
-      if (error) return setError("Error al guardar");
+      if (error) {
+        setError("Error al guardar");
+        throw new Error("Error al guardar");
+      }
       setOk("Servicio agregado");
       setEsNuevo(false);
       setModoEdicion(false);
       setSelId(data.id);
+      dirtyForm.markAsClean();
     }
 
     setForm(VACIO);

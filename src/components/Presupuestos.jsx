@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { supabase, getUserId } from "../supabase";
+import { useDirtyForm } from "../hooks/useDirtyForm";
 
 const HOY = new Date().toISOString().split("T")[0];
 
@@ -33,6 +34,27 @@ export default function Presupuestos({ perfil, soloLectura }) {
   const [filtroCliente, setFiltroCliente] = useState("");
   const [categorias, setCategorias] = useState([]);
   const pdfRef = useRef(null);
+
+  // Hook de protección contra pérdida de datos
+  const dirtyForm = useDirtyForm(FORM_VACIO, async () => {
+    if (vista === "nuevo") {
+      await guardarPresupuesto();
+    }
+  });
+
+  // Registrar estado del formulario con sistema global
+  useEffect(() => {
+    if (dirtyForm.isDirty && vista === "nuevo") {
+      window.currentDirtyForm = {
+        isDirty: dirtyForm.isDirty,
+        onSave: async () => {
+          await guardarPresupuesto();
+        },
+      };
+    } else {
+      window.currentDirtyForm = null;
+    }
+  }, [dirtyForm.isDirty, vista]);
 
   useEffect(() => {
     cargarTodo();
@@ -82,6 +104,30 @@ export default function Presupuestos({ perfil, soloLectura }) {
   }
 
   async function cargarParaEditar(p) {
+    // Verificar si hay cambios sin guardar antes de editar
+    if (dirtyForm.isDirty && vista === "nuevo") {
+      if (window.showDirtyFormModal) {
+        window.showDirtyFormModal(
+          async () => {
+            // Guardar
+            await guardarPresupuesto();
+            doCargarParaEditar(p);
+          },
+          () => {
+            // Descartar
+            doCargarParaEditar(p);
+          },
+          () => {
+            // Cancelar
+          },
+        );
+      }
+    } else {
+      doCargarParaEditar(p);
+    }
+  }
+
+  async function doCargarParaEditar(p) {
     const [pm, ps] = await Promise.all([
       supabase
         .from("presupuesto_materiales")
@@ -92,30 +138,39 @@ export default function Presupuestos({ perfil, soloLectura }) {
         .select(`*, servicios(nombre)`)
         .eq("presupuesto_id", p.id),
     ]);
-    setForm({
+    const presupuestoForm = {
       cliente_id: p.cliente_id,
       fecha: p.fecha,
       observaciones: p.observaciones || "",
       estado: p.estado || "borrador",
+    };
+    const newItemsMat = (pm.data || []).map((i) => ({
+      material_id: i.material_id,
+      nombre: i.materiales?.nombre,
+      unidad: i.materiales?.unidad,
+      cantidad: i.cantidad,
+      precio_unitario: i.precio_unitario,
+      subtotal: i.subtotal,
+    }));
+    const newItemsSer = (ps.data || []).map((i) => ({
+      servicio_id: i.servicio_id,
+      nombre: i.servicios?.nombre,
+      precio: i.precio,
+      descripcion: i.descripcion || "",
+    }));
+
+    setForm(presupuestoForm);
+    setItemsMat(newItemsMat);
+    setItemsSer(newItemsSer);
+
+    // Actualizar el estado del hook con los datos cargados
+    dirtyForm.updateData({
+      ...presupuestoForm,
+      itemsMat: newItemsMat,
+      itemsSer: newItemsSer,
     });
-    setItemsMat(
-      (pm.data || []).map((i) => ({
-        material_id: i.material_id,
-        nombre: i.materiales?.nombre,
-        unidad: i.materiales?.unidad,
-        cantidad: i.cantidad,
-        precio_unitario: i.precio_unitario,
-        subtotal: i.subtotal,
-      })),
-    );
-    setItemsSer(
-      (ps.data || []).map((i) => ({
-        servicio_id: i.servicio_id,
-        nombre: i.servicios?.nombre,
-        precio: i.precio,
-        descripcion: i.descripcion || "",
-      })),
-    );
+    dirtyForm.markAsClean();
+
     setEditId(p.id);
     setError("");
     setVista("nuevo");
@@ -123,7 +178,9 @@ export default function Presupuestos({ perfil, soloLectura }) {
   }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const newForm = { ...form, [e.target.name]: e.target.value };
+    setForm(newForm);
+    dirtyForm.updateData(newForm);
   }
 
   function agregarMaterial() {
@@ -132,20 +189,19 @@ export default function Presupuestos({ perfil, soloLectura }) {
     if (!mat) return;
     const cant = parseFloat(matCant) || 1;
     const existe = itemsMat.find((i) => i.material_id === matSel);
+    let newItemsMat;
     if (existe) {
-      setItemsMat(
-        itemsMat.map((i) =>
-          i.material_id === matSel
-            ? {
-                ...i,
-                cantidad: i.cantidad + cant,
-                subtotal: (i.cantidad + cant) * i.precio_unitario,
-              }
-            : i,
-        ),
+      newItemsMat = itemsMat.map((i) =>
+        i.material_id === matSel
+          ? {
+              ...i,
+              cantidad: i.cantidad + cant,
+              subtotal: (i.cantidad + cant) * i.precio_unitario,
+            }
+          : i,
       );
     } else {
-      setItemsMat([
+      newItemsMat = [
         ...itemsMat,
         {
           material_id: mat.id,
@@ -155,14 +211,26 @@ export default function Presupuestos({ perfil, soloLectura }) {
           precio_unitario: mat.precio_unitario,
           subtotal: cant * mat.precio_unitario,
         },
-      ]);
+      ];
     }
+    setItemsMat(newItemsMat);
+    dirtyForm.updateData({
+      ...form,
+      itemsMat: newItemsMat,
+      itemsSer: itemsSer,
+    });
     setMatSel("");
     setMatCant(1);
   }
 
   function quitarMaterial(material_id) {
-    setItemsMat(itemsMat.filter((i) => i.material_id !== material_id));
+    const newItemsMat = itemsMat.filter((i) => i.material_id !== material_id);
+    setItemsMat(newItemsMat);
+    dirtyForm.updateData({
+      ...form,
+      itemsMat: newItemsMat,
+      itemsSer: itemsSer,
+    });
   }
 
   function agregarServicio() {
@@ -170,7 +238,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
     const ser = servicios.find((s) => s.id === serSel);
     if (!ser) return;
     if (itemsSer.find((i) => i.servicio_id === serSel)) return;
-    setItemsSer([
+    const newItemsSer = [
       ...itemsSer,
       {
         servicio_id: ser.id,
@@ -178,20 +246,36 @@ export default function Presupuestos({ perfil, soloLectura }) {
         precio: ser.precio,
         descripcion: ser.descripcion || "",
       },
-    ]);
+    ];
+    setItemsSer(newItemsSer);
+    dirtyForm.updateData({
+      ...form,
+      itemsMat: itemsMat,
+      itemsSer: newItemsSer,
+    });
     setSerSel("");
   }
 
   function quitarServicio(servicio_id) {
-    setItemsSer(itemsSer.filter((i) => i.servicio_id !== servicio_id));
+    const newItemsSer = itemsSer.filter((i) => i.servicio_id !== servicio_id);
+    setItemsSer(newItemsSer);
+    dirtyForm.updateData({
+      ...form,
+      itemsMat: itemsMat,
+      itemsSer: newItemsSer,
+    });
   }
 
   function actualizarServicio(servicio_id, campo, valor) {
-    setItemsSer(
-      itemsSer.map((i) =>
-        i.servicio_id === servicio_id ? { ...i, [campo]: valor } : i,
-      ),
+    const newItemsSer = itemsSer.map((i) =>
+      i.servicio_id === servicio_id ? { ...i, [campo]: valor } : i,
     );
+    setItemsSer(newItemsSer);
+    dirtyForm.updateData({
+      ...form,
+      itemsMat: itemsMat,
+      itemsSer: newItemsSer,
+    });
   }
 
   const presupuestosFiltrados = presupuestos.filter((p) => {
@@ -212,18 +296,61 @@ export default function Presupuestos({ perfil, soloLectura }) {
 
   async function guardarPresupuesto() {
     setError("");
-    if (!form.cliente_id) return setError("Seleccioná un cliente");
-    if (itemsMat.length === 0 && itemsSer.length === 0)
-      return setError("Agregá al menos un material o servicio");
+
+    // Obtener datos actualizados del hook si los arrays del componente están vacíos
+    let currentItemsMat = itemsMat;
+    let currentItemsSer = itemsSer;
+
+    // Si los arrays están vacíos pero el hook tiene datos, usar los datos del hook
+    if (
+      itemsMat.length === 0 &&
+      itemsSer.length === 0 &&
+      dirtyForm.currentData
+    ) {
+      if (dirtyForm.currentData.itemsMat) {
+        currentItemsMat = dirtyForm.currentData.itemsMat;
+      }
+      if (dirtyForm.currentData.itemsSer) {
+        currentItemsSer = dirtyForm.currentData.itemsSer;
+      }
+    }
+
+    // Obtener datos del formulario del hook si están disponibles
+    let currentForm = form;
+    if (dirtyForm.currentData && dirtyForm.currentData.cliente_id) {
+      currentForm = {
+        cliente_id: dirtyForm.currentData.cliente_id,
+        fecha: dirtyForm.currentData.fecha,
+        observaciones: dirtyForm.currentData.observaciones || "",
+        estado: dirtyForm.currentData.estado || "borrador",
+      };
+    }
+
+    if (!currentForm.cliente_id) {
+      setError("Seleccioná un cliente");
+      throw new Error("Seleccioná un cliente");
+    }
+    if (currentItemsMat.length === 0 && currentItemsSer.length === 0) {
+      setError("Agregá al menos un material o servicio");
+      throw new Error("Agregá al menos un material o servicio");
+    }
     setGuardando(true);
 
     const userId = await getUserId();
+    // Calcular totales con los datos actualizados
+    const totalMat = currentItemsMat.reduce((acc, i) => acc + i.subtotal, 0);
+    const totalSer = currentItemsSer.reduce(
+      (acc, i) => acc + (parseFloat(i.precio) || 0),
+      0,
+    );
+    const totalGen = totalMat + totalSer;
+
     const datosPresupuesto = {
       user_id: userId,
-      cliente_id: form.cliente_id,
-      fecha: form.fecha,
-      observaciones: form.observaciones.trim(),
-      estado: form.estado,
+      cliente_id: currentForm.cliente_id,
+      fecha: currentForm.fecha,
+      observaciones: currentForm.observaciones.trim(),
+      estado: currentForm.estado,
       total_materiales: totalMat,
       total_servicios: totalSer,
       total: totalGen,
@@ -238,7 +365,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
       if (pErr) {
         setError("Error al actualizar el presupuesto");
         setGuardando(false);
-        return;
+        throw new Error("Error al actualizar el presupuesto");
       }
       await supabase
         .from("presupuesto_materiales")
@@ -257,14 +384,14 @@ export default function Presupuestos({ perfil, soloLectura }) {
       if (pErr) {
         setError("Error al guardar el presupuesto");
         setGuardando(false);
-        return;
+        throw new Error("Error al guardar el presupuesto");
       }
       pid = pData.id;
     }
 
-    if (itemsMat.length > 0) {
+    if (currentItemsMat.length > 0) {
       await supabase.from("presupuesto_materiales").insert(
-        itemsMat.map((i) => ({
+        currentItemsMat.map((i) => ({
           presupuesto_id: pid,
           material_id: i.material_id,
           cantidad: i.cantidad,
@@ -273,9 +400,9 @@ export default function Presupuestos({ perfil, soloLectura }) {
         })),
       );
     }
-    if (itemsSer.length > 0) {
+    if (currentItemsSer.length > 0) {
       await supabase.from("presupuesto_servicios").insert(
-        itemsSer.map((i) => ({
+        currentItemsSer.map((i) => ({
           presupuesto_id: pid,
           servicio_id: i.servicio_id,
           precio: parseFloat(i.precio) || 0,
@@ -289,6 +416,8 @@ export default function Presupuestos({ perfil, soloLectura }) {
     setForm(FORM_VACIO);
     setItemsMat([]);
     setItemsSer([]);
+    dirtyForm.updateData(FORM_VACIO);
+    dirtyForm.markAsClean();
     await cargarTodo();
     // Volver al listado de presupuestos
     setVista("lista");
