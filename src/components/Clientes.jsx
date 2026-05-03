@@ -441,7 +441,7 @@ export default function Clientes({ soloLectura }) {
             >
               Esta acción no se puede deshacer.
             </p>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+            <div className="modal-footer">
               <button
                 className="btn btn-danger"
                 onClick={() => eliminar(confirmEliminar)}

@@ -33,6 +33,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
   const [error, setError] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [categorias, setCategorias] = useState([]);
+  const [confirmEliminar, setConfirmEliminar] = useState(null);
   const pdfRef = useRef(null);
 
   // Hook de protección contra pérdida de datos
@@ -432,8 +433,8 @@ export default function Presupuestos({ perfil, soloLectura }) {
   }
 
   async function eliminarPresupuesto(id) {
-    if (!confirm("¿Eliminar este presupuesto?")) return;
     await supabase.from("presupuestos").delete().eq("id", id);
+    setConfirmEliminar(null);
     cargarTodo();
   }
 
@@ -2103,7 +2104,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                           <button
                             className="btn btn-danger"
                             title="Eliminar"
-                            onClick={() => eliminarPresupuesto(p.id)}
+                            onClick={() => setConfirmEliminar(p.id)}
                           >
                             <IconoEliminar />
                           </button>
@@ -2117,6 +2118,38 @@ export default function Presupuestos({ perfil, soloLectura }) {
           </table>
         )}
       </div>
+
+      {/* MODAL CONFIRMAR ELIMINAR */}
+      {confirmEliminar && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>¿Eliminar presupuesto?</h3>
+            <p
+              style={{
+                color: "#888",
+                fontSize: "0.9rem",
+                margin: "0.5rem 0 1rem",
+              }}
+            >
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="modal-footer">
+              <button
+                className="btn btn-danger"
+                onClick={() => eliminarPresupuesto(confirmEliminar)}
+              >
+                Eliminar
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setConfirmEliminar(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

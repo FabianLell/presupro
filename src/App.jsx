@@ -56,6 +56,7 @@ export default function App() {
     onCancel: null,
   });
   const [cantPresupuestos, setCantPresupuestos] = useState(0);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const [abierto, setAbierto] = useState(false);
   const [pinned, setPinned] = useState(
@@ -219,8 +220,13 @@ export default function App() {
     setEstadoCuenta(calcularEstadoCuenta(perfilData, cant));
   }
 
-  async function handleLogout() {
+  function handleLogout() {
+    setConfirmLogout(true);
+  }
+
+  async function confirmarLogout() {
     await supabase.auth.signOut();
+    setConfirmLogout(false);
   }
 
   if (cargando)
@@ -511,6 +517,35 @@ export default function App() {
           onDiscard={dirtyFormConfig.onDiscard}
           onCancel={dirtyFormConfig.onCancel}
         />
+
+        {/* Modal de confirmación de cierre de sesión */}
+        {confirmLogout && (
+          <div className="modal-overlay">
+            <div className="modal">
+              <h3>¿Cerrar sesión?</h3>
+              <p
+                style={{
+                  color: "#888",
+                  fontSize: "0.9rem",
+                  margin: "0.5rem 0 1rem",
+                }}
+              >
+                ¿Estás seguro de que quieres cerrar tu sesión?
+              </p>
+              <div className="modal-footer">
+                <button className="btn btn-danger" onClick={confirmarLogout}>
+                  Cerrar sesión
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setConfirmLogout(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DirtyFormProvider>
   );

@@ -619,6 +619,47 @@ td .btn {
   font-size: 1rem;
 }
 
+/* Modal de confirmación de dirty form */
+.dirty-form-modal .modal-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.dirty-form-modal .modal-footer .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Modales de eliminación - centrar contenido */
+.modal:not(.dirty-form-modal) {
+  text-align: center;
+}
+
+.modal:not(.dirty-form-modal) h3 {
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.modal:not(.dirty-form-modal) p {
+  text-align: center;
+  margin: 0.5rem 0 1rem;
+}
+
+.modal:not(.dirty-form-modal) .modal-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.modal:not(.dirty-form-modal) .modal-footer .btn {
+  width: 100%;
+  justify-content: center;
+}
+
 /* ── TOTAL BOX ─────────────────────────────── */
 
 .total-box {
