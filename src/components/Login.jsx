@@ -1,7 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 
 export default function Login({ onShowRegistro }) {
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent,
+      ) ||
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+    setIsMobileDevice(isMobile);
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -59,6 +69,7 @@ export default function Login({ onShowRegistro }) {
         alignItems: "center",
         justifyContent: "center",
         background: "#111",
+        padding: isMobileDevice ? "1rem" : "0",
       }}
     >
       <div
@@ -66,9 +77,10 @@ export default function Login({ onShowRegistro }) {
           background: "#1a1a1a",
           border: "1px solid #2a2a2a",
           borderRadius: "12px",
-          padding: "2.5rem",
+          padding: isMobileDevice ? "2rem 1.5rem" : "2.5rem",
           width: "100%",
-          maxWidth: "380px",
+          maxWidth: isMobileDevice ? "100%" : "380px",
+          margin: isMobileDevice ? "0 auto" : "0",
         }}
       >
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
@@ -76,12 +88,18 @@ export default function Login({ onShowRegistro }) {
             src="/logo-app.png"
             alt="PresuPro"
             style={{
-              height: "122px",
+              height: isMobileDevice ? "100px" : "122px",
               objectFit: "contain",
               marginBottom: "0.75rem",
             }}
           />
-          <p style={{ color: "#888", fontSize: "0.9rem", marginTop: "0.5rem" }}>
+          <p
+            style={{
+              color: "#888",
+              fontSize: isMobileDevice ? "1rem" : "0.9rem",
+              marginTop: "0.5rem",
+            }}
+          >
             Ingresá para continuar
           </p>
         </div>
@@ -94,12 +112,12 @@ export default function Login({ onShowRegistro }) {
           onClick={handleGoogle}
           style={{
             width: "100%",
-            padding: "0.75rem",
+            padding: isMobileDevice ? "1rem" : "0.75rem",
             borderRadius: "8px",
             border: "1px solid #333",
             background: "#222",
             color: "#f0f0f0",
-            fontSize: "0.95rem",
+            fontSize: isMobileDevice ? "1.1rem" : "0.95rem",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -107,6 +125,7 @@ export default function Login({ onShowRegistro }) {
             gap: "0.6rem",
             marginBottom: "1.25rem",
             transition: "background 0.15s",
+            minHeight: isMobileDevice ? "48px" : "auto",
           }}
           onMouseOver={(e) => (e.currentTarget.style.background = "#2a2a2a")}
           onMouseOut={(e) => (e.currentTarget.style.background = "#222")}
@@ -155,6 +174,11 @@ export default function Login({ onShowRegistro }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          style={{
+            padding: isMobileDevice ? "1rem" : "0.5rem 0.625rem",
+            fontSize: isMobileDevice ? "1.1rem" : "0.9rem",
+            minHeight: isMobileDevice ? "48px" : "auto",
+          }}
         />
         <input
           type="password"
@@ -162,6 +186,11 @@ export default function Login({ onShowRegistro }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          style={{
+            padding: isMobileDevice ? "1rem" : "0.5rem 0.625rem",
+            fontSize: isMobileDevice ? "1.1rem" : "0.9rem",
+            minHeight: isMobileDevice ? "48px" : "auto",
+          }}
         />
 
         <button
@@ -170,9 +199,10 @@ export default function Login({ onShowRegistro }) {
           disabled={cargando}
           style={{
             width: "100%",
-            padding: "0.75rem",
-            fontSize: "1rem",
+            padding: isMobileDevice ? "1rem" : "0.75rem",
+            fontSize: isMobileDevice ? "1.1rem" : "1rem",
             marginTop: "0.5rem",
+            minHeight: isMobileDevice ? "48px" : "auto",
           }}
         >
           {cargando ? "Ingresando..." : "Ingresar"}
@@ -183,9 +213,10 @@ export default function Login({ onShowRegistro }) {
           onClick={onShowRegistro}
           style={{
             width: "100%",
-            padding: "0.75rem",
-            fontSize: "1rem",
+            padding: isMobileDevice ? "1rem" : "0.75rem",
+            fontSize: isMobileDevice ? "1.1rem" : "1rem",
             marginTop: "0.6rem",
+            minHeight: isMobileDevice ? "48px" : "auto",
           }}
         >
           Crear cuenta nueva
@@ -196,9 +227,10 @@ export default function Login({ onShowRegistro }) {
           onClick={handleForgotPassword}
           style={{
             width: "100%",
-            padding: "0.65rem",
-            fontSize: "0.92rem",
+            padding: isMobileDevice ? "0.9rem" : "0.65rem",
+            fontSize: isMobileDevice ? "1rem" : "0.92rem",
             marginTop: "0.5rem",
+            minHeight: isMobileDevice ? "44px" : "auto",
           }}
         >
           Olvidé mi contraseña
