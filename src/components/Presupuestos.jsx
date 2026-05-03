@@ -279,6 +279,33 @@ export default function Presupuestos({ perfil, soloLectura }) {
     });
   }
 
+  // Función para volver al listado con protección
+  function volverAlListado() {
+    // Verificar si hay cambios sin guardar
+    if (dirtyForm.isDirty && window.currentDirtyForm) {
+      // Mostrar modal de confirmación
+      window.showDirtyFormModal(
+        async () => {
+          // Guardar
+          await guardarPresupuesto();
+          setVista("lista");
+          setEditId(null);
+        },
+        () => {
+          // Descartar cambios
+          setVista("lista");
+          setEditId(null);
+          dirtyForm.markAsClean();
+          window.currentDirtyForm = null;
+        }
+      );
+    } else {
+      // No hay cambios, volver directamente
+      setVista("lista");
+      setEditId(null);
+    }
+  }
+
   const presupuestosFiltrados = presupuestos.filter((p) => {
     if (!filtroCliente) return true;
     const texto = filtroCliente.toLowerCase();
@@ -428,7 +455,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
     await cargarDetalle(id);
     setTimeout(async () => {
       await generarPDF();
-      setVista("lista");
+      volverAlListado();
     }, 500);
   }
 
@@ -556,10 +583,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <button
               className="btn btn-secondary"
-              onClick={() => {
-                setVista("lista");
-                setEditId(null);
-              }}
+              onClick={volverAlListado}
             >
               {"←"} Volver
             </button>
@@ -716,94 +740,124 @@ export default function Presupuestos({ perfil, soloLectura }) {
           className="card no-print"
           style={{ borderColor: "#3a3a3a", padding: "0.5rem" }}
         >
-          <h2 style={{ fontSize: "0.85rem", marginBottom: "0.4rem" }}>
-            Datos del Presupuesto
-          </h2>
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "0.3rem 1rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "0.4rem",
+              paddingBottom: "0.3rem",
+              borderBottom: "1px solid #374151",
+            }}
+          >
+            <h2 style={{ fontSize: "0.85rem", margin: 0 }}>
+              Datos del Presupuesto Nro: {p.numero}
+            </h2>
+            <div style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+              Fecha: {p.fecha}
+            </div>
+          </div>
+          <div
+            style={{
               fontSize: "0.8rem",
             }}
           >
-            <div>
-              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
-                Cliente:
-              </span>
+            {/* Primera fila con línea horizontal abajo */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "0",
+                paddingBottom: "0.3rem",
+                borderBottom: "1px solid #374151",
+                marginBottom: "0.3rem",
+              }}
+            >
               <div
                 style={{
-                  color: "#e5e7eb",
-                  fontWeight: "500",
-                  marginTop: "0.1rem",
+                  paddingRight: "1rem",
+                  borderRight: "1px solid #374151",
                 }}
               >
-                {cliente
-                  ? `${cliente.apellido}, ${cliente.nombre}`
-                  : "Cliente no encontrado"}
+                <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                  Cliente:
+                </span>
+                <div
+                  style={{
+                    color: "#e5e7eb",
+                    fontWeight: "500",
+                    marginTop: "0.1rem",
+                  }}
+                >
+                  {cliente
+                    ? `${cliente.apellido}, ${cliente.nombre}`
+                    : "Cliente no encontrado"}
+                </div>
               </div>
-            </div>
-            <div>
-              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
-                Fecha:
-              </span>
-              <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
-                {p.fecha}
-              </div>
-            </div>
-            <div>
-              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
-                Estado:
-              </span>
-              <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
-                {badgeEstado(p.estado)}
-              </div>
-            </div>
-            <div>
-              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
-                N° Presupuesto:
-              </span>
-              <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
-                {p.numero}
-              </div>
-            </div>
-            {cliente?.telefono && (
-              <div>
+              <div
+                style={{
+                  paddingLeft: "1rem",
+                }}
+              >
                 <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
                   Teléfono:
                 </span>
                 <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
-                  {cliente.telefono}
+                  {cliente?.telefono || "—"}
                 </div>
               </div>
-            )}
-            {cliente?.direccion && (
-              <div>
+            </div>
+            
+            {/* Segunda fila con línea horizontal abajo */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "0",
+                paddingBottom: "0.3rem",
+                borderBottom: "1px solid #374151",
+                marginBottom: "0.3rem",
+              }}
+            >
+              <div
+                style={{
+                  paddingRight: "1rem",
+                  borderRight: "1px solid #374151",
+                }}
+              >
                 <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
                   Dirección:
                 </span>
                 <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
-                  {cliente.direccion}
+                  {cliente?.direccion || "—"}
                 </div>
               </div>
-            )}
-          </div>
-          {p.observaciones && (
-            <div
-              style={{
-                marginTop: "0.5rem",
-                paddingTop: "0.3rem",
-                borderTop: "1px solid #374151",
-              }}
-            >
-              <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
-                Observaciones:
-              </span>
-              <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
-                {p.observaciones}
+              <div
+                style={{
+                  paddingLeft: "1rem",
+                }}
+              >
+                <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                  Estado:
+                </span>
+                <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
+                  {badgeEstado(p.estado)}
+                </div>
               </div>
             </div>
-          )}
+          </div>
+          <div
+            style={{
+              marginTop: "0.5rem",
+            }}
+          >
+            <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+              Observaciones:
+            </span>
+            <div style={{ color: "#e5e7eb", marginTop: "0.1rem" }}>
+              {p.observaciones || "—"}
+            </div>
+          </div>
         </div>
 
         {p.items_materiales.length > 0 && (
@@ -1493,10 +1547,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
         >
           <button
             className="btn btn-secondary"
-            onClick={() => {
-              setVista("lista");
-              setEditId(null);
-            }}
+            onClick={volverAlListado}
           >
             ← Cancelar
           </button>
@@ -1709,17 +1760,21 @@ export default function Presupuestos({ perfil, soloLectura }) {
                             value={i.cantidad}
                             onChange={(e) => {
                               const cant = parseFloat(e.target.value) || 0;
-                              setItemsMat(
-                                itemsMat.map((m) =>
-                                  m.material_id === i.material_id
-                                    ? {
-                                        ...m,
-                                        cantidad: cant,
-                                        subtotal: cant * m.precio_unitario,
-                                      }
-                                    : m,
-                                ),
+                              const newItemsMat = itemsMat.map((m) =>
+                                m.material_id === i.material_id
+                                  ? {
+                                      ...m,
+                                      cantidad: cant,
+                                      subtotal: cant * m.precio_unitario,
+                                    }
+                                  : m,
                               );
+                              setItemsMat(newItemsMat);
+                              dirtyForm.updateData({
+                                ...form,
+                                itemsMat: newItemsMat,
+                                itemsSer: itemsSer,
+                              });
                             }}
                           />
                         </td>
