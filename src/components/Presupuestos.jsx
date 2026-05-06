@@ -72,11 +72,11 @@ export default function Presupuestos({ perfil, soloLectura }) {
       .from("presupuestos")
       .select(`*, clientes(nombre, apellido)`)
       .order("created_at", { ascending: false });
-    
+
     if (!verEliminados) {
       query = query.is("deleted_at", null);
     }
-    
+
     const [p, c, m, s, cat] = await Promise.all([
       query,
       supabase.from("clientes").select("*").order("apellido"),
@@ -308,7 +308,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
           setEditId(null);
           dirtyForm.markAsClean();
           window.currentDirtyForm = null;
-        }
+        },
       );
     } else {
       // No hay cambios, volver directamente
@@ -485,12 +485,12 @@ export default function Presupuestos({ perfil, soloLectura }) {
       .from("presupuestos")
       .update({ deleted_at: null })
       .eq("id", id);
-    
+
     // Actualizar el presupuesto actual localmente
     if (presupuestoActual && presupuestoActual.id === id) {
-      setPresupuestoActual(prev => ({ ...prev, deleted_at: null }));
+      setPresupuestoActual((prev) => ({ ...prev, deleted_at: null }));
     }
-    
+
     cargarTodo();
   }
 
@@ -591,6 +591,37 @@ export default function Presupuestos({ perfil, soloLectura }) {
     );
   }
 
+  // Versión móvil del indicador de estado
+  function indicadorEstadoMobile(estado) {
+    const configuraciones = {
+      borrador: { letra: "B", color: "#888", fondo: "#2a2a2a" },
+      enviado: { letra: "E", color: "#60a5fa", fondo: "#1e3a5f" },
+      aprobado: { letra: "A", color: "#4ade80", fondo: "#14532d" },
+      rechazado: { letra: "R", color: "#f87171", fondo: "#450a0a" },
+    };
+    const config = configuraciones[estado] || configuraciones.borrador;
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "24px",
+          height: "24px",
+          borderRadius: "50%",
+          background: config.fondo,
+          color: config.color,
+          fontSize: "0.7rem",
+          fontWeight: "700",
+          lineHeight: "1",
+        }}
+        title={estado.charAt(0).toUpperCase() + estado.slice(1)}
+      >
+        {config.letra}
+      </span>
+    );
+  }
+
   if (cargando)
     return <p style={{ color: "#888", padding: "2rem" }}>Cargando...</p>;
 
@@ -610,10 +641,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
           }}
         >
           <div style={{ display: "flex", gap: "0.75rem" }}>
-            <button
-              className="btn btn-secondary"
-              onClick={volverAlListado}
-            >
+            <button className="btn btn-secondary" onClick={volverAlListado}>
               {"←"} Volver
             </button>
             {p.deleted_at ? (
@@ -858,7 +886,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                 </div>
               </div>
             </div>
-            
+
             {/* Segunda fila con línea horizontal abajo */}
             <div
               style={{
@@ -1592,7 +1620,8 @@ export default function Presupuestos({ perfil, soloLectura }) {
                   margin: "0.5rem 0 1rem",
                 }}
               >
-                El presupuesto será marcado como eliminado pero podrá ser restaurado más tarde.
+                El presupuesto será marcado como eliminado pero podrá ser
+                restaurado más tarde.
               </p>
               <div className="modal-footer">
                 <button
@@ -1628,10 +1657,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
             flexShrink: 0,
           }}
         >
-          <button
-            className="btn btn-secondary"
-            onClick={volverAlListado}
-          >
+          <button className="btn btn-secondary" onClick={volverAlListado}>
             ← Cancelar
           </button>
           <button
@@ -2202,74 +2228,248 @@ export default function Presupuestos({ perfil, soloLectura }) {
             No hay presupuestos todavía
           </p>
         ) : (
-          <table style={{ tableLayout: "fixed", width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={{ width: "8%" }}>Número</th>
-                <th style={{ width: "22%", textAlign: "left" }}>Cliente</th>
-                <th style={{ width: "12%" }}>Fecha</th>
-                <th style={{ width: "12%" }}>Estado</th>
-                <th style={{ width: "31%" }}>Observaciones</th>
-                <th style={{ width: "15%", textAlign: "right" }}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {presupuestosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={{ color: "#888" }}>
-                    No se encontraron presupuestos
-                  </td>
-                </tr>
-              ) : (
-                presupuestosFiltrados.map((p) => (
-                  <tr
-                    key={p.id}
-                    onClick={() => cargarDetalle(p.id)}
-                    style={{ 
-                      cursor: "pointer",
-                      ...(p.deleted_at ? { 
-                        color: "#999", 
-                        textDecoration: "line-through",
-                        opacity: 0.7 
-                      } : {})
-                    }}
-                    className={p.deleted_at ? "eliminado" : ""}
-                  >
-                    <td style={{ textAlign: "center", fontFamily: "monospace", fontWeight: "bold" }}>
-                      #{p.numero}
-                    </td>
-                    <td style={{ textAlign: "left" }}>
-                      {p.clientes ? (
-                        <span>
-                          {p.clientes.apellido}, {p.clientes.nombre}
-                        </span>
-                      ) : (
-                        <span style={{ color: "#888" }}>—</span>
-                      )}
-                      {p.deleted_at && (
-                        <span style={{ 
-                          fontSize: "0.7rem", 
-                          color: "#ff6b6b", 
-                          fontWeight: "bold",
-                          marginLeft: "0.5rem"
-                        }}>
-                          ELIMINADO
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.fecha}</td>
-                    <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{badgeEstado(p.estado)}</td>
-                    <td style={{ color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={p.observaciones || ""}>
-                      {p.observaciones || "—"}
-                    </td>
-                    <td style={{ textAlign: "right", fontFamily: "monospace" }}>
-                      ${parseFloat(p.total).toLocaleString("es-AR")}
-                    </td>
+          <>
+            {/* Vista Desktop */}
+            <div className="desktop-view">
+              <table style={{ tableLayout: "fixed", width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "8%" }}>Número</th>
+                    <th style={{ width: "22%", textAlign: "left" }}>Cliente</th>
+                    <th style={{ width: "12%" }}>Fecha</th>
+                    <th style={{ width: "12%" }}>Estado</th>
+                    <th style={{ width: "31%" }}>Observaciones</th>
+                    <th style={{ width: "15%", textAlign: "right" }}>Total</th>
                   </tr>
-                ))
+                </thead>
+                <tbody>
+                  {presupuestosFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" style={{ color: "#888" }}>
+                        No se encontraron presupuestos
+                      </td>
+                    </tr>
+                  ) : (
+                    presupuestosFiltrados.map((p) => (
+                      <tr
+                        key={p.id}
+                        onClick={() => cargarDetalle(p.id)}
+                        style={{
+                          cursor: "pointer",
+                          ...(p.deleted_at
+                            ? {
+                                color: "#999",
+                                textDecoration: "line-through",
+                                opacity: 0.7,
+                              }
+                            : {}),
+                        }}
+                        className={p.deleted_at ? "eliminado" : ""}
+                      >
+                        <td
+                          style={{
+                            textAlign: "center",
+                            fontFamily: "monospace",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          #{p.numero}
+                        </td>
+                        <td style={{ textAlign: "left" }}>
+                          {p.clientes ? (
+                            <span>
+                              {p.clientes.apellido}, {p.clientes.nombre}
+                            </span>
+                          ) : (
+                            <span style={{ color: "#888" }}>—</span>
+                          )}
+                          {p.deleted_at && (
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                color: "#ff6b6b",
+                                fontWeight: "bold",
+                                marginLeft: "0.5rem",
+                              }}
+                            >
+                              ELIMINADO
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {p.fecha}
+                        </td>
+                        <td
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {badgeEstado(p.estado)}
+                        </td>
+                        <td
+                          style={{
+                            color: "#888",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={p.observaciones || ""}
+                        >
+                          {p.observaciones || "—"}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          ${parseFloat(p.total).toLocaleString("es-AR")}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vista Mobile */}
+            <div className="mobile-view">
+              {presupuestosFiltrados.length === 0 ? (
+                <p style={{ color: "#888", padding: "1rem" }}>
+                  No se encontraron presupuestos
+                </p>
+              ) : (
+                <div className="mobile-presupuestos-list">
+                  {presupuestosFiltrados.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`mobile-presupuesto-item ${p.deleted_at ? "eliminado" : ""}`}
+                      onClick={() => cargarDetalle(p.id)}
+                      style={{
+                        cursor: "pointer",
+                        background: p.deleted_at ? "#1a1a1a" : "#1a1a1a",
+                        border: "1px solid #2a2a2a",
+                        borderRadius: "8px",
+                        padding: "0.75rem",
+                        marginBottom: "0.75rem",
+                        ...(p.deleted_at
+                          ? {
+                              opacity: 0.6,
+                              textDecoration: "line-through",
+                            }
+                          : {}),
+                      }}
+                    >
+                      {/* Fila principal: Cliente, Total, Estado */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "0.9rem",
+                              fontWeight: "600",
+                              color: "#f0f0f0",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {p.clientes
+                              ? `${p.clientes.apellido}, ${p.clientes.nombre}`
+                              : "—"}
+                          </div>
+                          {p.deleted_at && (
+                            <div
+                              style={{
+                                fontSize: "0.7rem",
+                                color: "#ff6b6b",
+                                fontWeight: "bold",
+                                marginTop: "0.2rem",
+                              }}
+                            >
+                              ELIMINADO
+                            </div>
+                          )}
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "1rem",
+                              fontWeight: "700",
+                              color: "#4ade80",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            ${parseFloat(p.total).toLocaleString("es-AR")}
+                          </div>
+                          {indicadorEstadoMobile(p.estado)}
+                        </div>
+                      </div>
+
+                      {/* Fila secundaria: Número, Fecha */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "0.5rem",
+                          fontSize: "0.8rem",
+                          color: "#888",
+                        }}
+                      >
+                        <span>#{p.numero}</span>
+                        <span>{p.fecha}</span>
+                      </div>
+
+                      {/* Fila de observaciones (si existen) */}
+                      {p.observaciones && (
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#666",
+                            fontStyle: "italic",
+                            lineHeight: "1.4",
+                            wordBreak: "break-word",
+                            marginTop: "0.5rem",
+                            paddingTop: "0.5rem",
+                            borderTop: "1px solid #2a2a2a",
+                          }}
+                        >
+                          {p.observaciones}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </div>
