@@ -497,6 +497,17 @@ export default function Presupuestos({ perfil, soloLectura }) {
   async function generarPDF() {
     const elemento = pdfRef.current;
     if (!elemento) return;
+
+    // Guardar viewport original
+    const originalViewportWidth = window.innerWidth;
+
+    // Forzar viewport de PC temporalmente
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: 1200, // Ancho típico de PC
+    });
+
     elemento.style.display = "block";
     await new Promise((r) => setTimeout(r, 300));
     const canvas = await html2canvas(elemento, {
@@ -505,6 +516,13 @@ export default function Presupuestos({ perfil, soloLectura }) {
       backgroundColor: "#ffffff",
     });
     elemento.style.display = "none";
+
+    // Restaurar viewport original
+    Object.defineProperty(window, "innerWidth", {
+      writable: true,
+      configurable: true,
+      value: originalViewportWidth,
+    });
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "mm", "a4");
     const pdfWidth = pdf.internal.pageSize.getWidth();
