@@ -15,6 +15,21 @@ import Admin from "./components/Admin";
 import Perfil from "./components/Perfil";
 import Onboarding from "./components/Onboarding";
 
+// Hook para detectar mobile
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isMobile;
+}
+
 const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAIL || "")
   .split(",")
   .map((x) => x.trim().toLowerCase())
@@ -49,6 +64,7 @@ export default function App() {
     mensaje: "",
   });
   const [confirmacionEmail, setConfirmacionEmail] = useState(false);
+  const isMobile = useIsMobile();
 
   // Estado para protección de datos
   const [dirtyFormConfig, setDirtyFormConfig] = useState({
@@ -59,13 +75,19 @@ export default function App() {
   });
   const [cantPresupuestos, setCantPresupuestos] = useState(0);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [menuMasAbierto, setMenuMasAbierto] = useState(false);
 
   const [abierto, setAbierto] = useState(false);
   const [pinned, setPinned] = useState(
     () => localStorage.getItem("sidebarPinned") === "true",
   );
 
+  // En mobile, el sidebar siempre debe estar oculto
+  const sidebarVisible = !isMobile && (abierto || pinned);
+  const colapsado = !abierto && !pinned;
+
   const sidebarRef = useRef(null);
+  const menuMasRef = useRef(null);
 
   // Cerrar sidebar al hacer click fuera (solo en modo temporal)
   useEffect(() => {
@@ -78,6 +100,18 @@ export default function App() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [abierto, pinned]);
+
+  // Cerrar menú "Más" al hacer click fuera (solo en mobile)
+  useEffect(() => {
+    if (!menuMasAbierto || !isMobile) return;
+    function handleClick(e) {
+      if (menuMasRef.current && !menuMasRef.current.contains(e.target)) {
+        setMenuMasAbierto(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [menuMasAbierto, isMobile]);
 
   function togglePin() {
     const nuevo = !pinned;
@@ -118,8 +152,9 @@ export default function App() {
   // Detectar si estamos en la página de confirmación de email
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const hasTokens = urlParams.has("access_token") && urlParams.has("refresh_token");
-    
+    const hasTokens =
+      urlParams.has("access_token") && urlParams.has("refresh_token");
+
     if (hasTokens) {
       setConfirmacionEmail(true);
     } else {
@@ -140,14 +175,16 @@ export default function App() {
           window.currentDirtyForm = null; // Limpiar estado global
           // No llamar hideDirtyFormModal() aquí, el modal se cierra automáticamente
           setSeccion(id);
-          if (!pinned) setTimeout(() => setAbierto(false), 150);
+          if (!pinned && !isMobile) setTimeout(() => setAbierto(false), 150);
+          setMenuMasAbierto(false); // Cerrar menú móvil
         },
         () => {
           // Descartar
           window.currentDirtyForm = null; // Limpiar estado global
           // No llamar hideDirtyFormModal() aquí, el modal se cierra automáticamente
           setSeccion(id);
-          if (!pinned) setTimeout(() => setAbierto(false), 150);
+          if (!pinned && !isMobile) setTimeout(() => setAbierto(false), 150);
+          setMenuMasAbierto(false); // Cerrar menú móvil
         },
         () => {
           // Cancelar - el modal se cierra automáticamente
@@ -157,7 +194,8 @@ export default function App() {
     } else {
       // Navegación normal
       setSeccion(id);
-      if (!pinned) setTimeout(() => setAbierto(false), 150);
+      if (!pinned && !isMobile) setTimeout(() => setAbierto(false), 150);
+      setMenuMasAbierto(false); // Cerrar menú móvil
     }
   }
 
@@ -327,177 +365,205 @@ export default function App() {
     );
   }
 
-  const colapsado = !abierto && !pinned;
-
   return (
     <DirtyFormProvider>
-      <div className="app">
-        {/* ── SIDEBAR ── */}
-        <nav
-          ref={sidebarRef}
-          className={`sidebar ${colapsado ? "colapsado" : ""}`}
-        >
-          {/* Toggle + Pin */}
-          <div
-            className="sidebar-toggle"
-            style={{
-              display: "flex",
-              justifyContent: colapsado ? "center" : "space-between",
-              width: "100%",
-            }}
+      <div className={`app ${isMobile ? "mobile" : "desktop"}`}>
+        {/* ── SIDEBAR (solo desktop) ── */}
+        {!isMobile && (
+          <nav
+            ref={sidebarRef}
+            className={`sidebar ${colapsado ? "colapsado" : ""}`}
           >
-            <button
-              onClick={() => setAbierto(!abierto)}
-              title={colapsado ? "Abrir menú" : "Cerrar menú"}
+            {/* Toggle + Pin */}
+            <div
+              className="sidebar-toggle"
+              style={{
+                display: "flex",
+                justifyContent: colapsado ? "center" : "space-between",
+                width: "100%",
+              }}
             >
-              ☰
-            </button>
-            {!colapsado && (
               <button
-                onClick={togglePin}
-                title={pinned ? "Desfijar sidebar" : "Fijar sidebar"}
-                style={{
-                  color: pinned ? "#2563eb" : "#888",
-                  backgroundColor: pinned ? "#1e3a5f" : "transparent",
-                  border: pinned
-                    ? "1px solid #2563eb"
-                    : "1px solid transparent",
-                  fontWeight: pinned ? "bold" : "normal",
-                }}
+                onClick={() => setAbierto(!abierto)}
+                title={colapsado ? "Abrir menú" : "Cerrar menú"}
               >
-                📌
+                ☰
               </button>
-            )}
-          </div>
+              {!colapsado && (
+                <button
+                  onClick={togglePin}
+                  title={pinned ? "Desfijar sidebar" : "Fijar sidebar"}
+                  style={{
+                    color: pinned ? "#2563eb" : "#888",
+                    backgroundColor: pinned ? "#1e3a5f" : "transparent",
+                    border: pinned
+                      ? "1px solid #2563eb"
+                      : "1px solid transparent",
+                    fontWeight: pinned ? "bold" : "normal",
+                  }}
+                >
+                  📌
+                </button>
+              )}
+            </div>
 
-          {/* Perfil del negocio */}
-          <div 
-            className="sidebar-perfil"
-            onClick={() => navegarA("perfil")}
-            style={{ cursor: "pointer" }}
-          >
-            <LogoNegocio size={colapsado ? 32 : 44} />
-            {!colapsado && (
-              <span className="sidebar-perfil-nombre">{nombreNegocio}</span>
-            )}
-          </div>
+            {/* Perfil del negocio */}
+            <div
+              className="sidebar-perfil"
+              onClick={() => navegarA("perfil")}
+              style={{ cursor: "pointer" }}
+            >
+              <LogoNegocio size={colapsado ? 32 : 44} />
+              {!colapsado && (
+                <span className="sidebar-perfil-nombre">{nombreNegocio}</span>
+              )}
+            </div>
 
-          {/* Navegación */}
-          <div className="sidebar-nav">
-            {SECCIONES.map((s) => (
-              <button
-                key={s.id}
-                className={`sidebar-btn ${seccion === s.id ? "active" : ""}`}
-                onClick={() => navegarA(s.id)}
-                data-tooltip={s.label}
-              >
-                <span className="btn-icon">{s.icono}</span>
-                <span className="btn-label">{s.label}</span>
-              </button>
-            ))}
+            {/* Navegación */}
+            <div className="sidebar-nav">
+              {SECCIONES.map((s) => (
+                <button
+                  key={s.id}
+                  className={`sidebar-btn ${seccion === s.id ? "active" : ""}`}
+                  onClick={() => navegarA(s.id)}
+                  data-tooltip={s.label}
+                >
+                  <span className="btn-icon">{s.icono}</span>
+                  <span className="btn-label">{s.label}</span>
+                </button>
+              ))}
 
-            {isAdmin && (
-              <button
-                className={`sidebar-btn ${seccion === "admin" ? "active" : ""}`}
-                onClick={() => navegarA("admin")}
-                data-tooltip="Admin"
-              >
-                <span className="btn-icon">🛡️</span>
-                <span className="btn-label">Admin</span>
-              </button>
-            )}
+              {isAdmin && (
+                <button
+                  className={`sidebar-btn ${seccion === "admin" ? "active" : ""}`}
+                  onClick={() => navegarA("admin")}
+                  data-tooltip="Admin"
+                >
+                  <span className="btn-icon">🛡️</span>
+                  <span className="btn-label">Admin</span>
+                </button>
+              )}
 
-            {!estadoCuenta.soloLectura &&
-              estadoCuenta.diasRestantes !== undefined && (
+              {!estadoCuenta.soloLectura &&
+                estadoCuenta.diasRestantes !== undefined && (
+                  <div
+                    className="prueba-aviso"
+                    style={{
+                      background:
+                        estadoCuenta.diasRestantes <= 5 ||
+                        estadoCuenta.presupuestosRestantes <= 5
+                          ? "#450a0a"
+                          : "#1a1a1a",
+                      border: `1px solid ${estadoCuenta.diasRestantes <= 5 || estadoCuenta.presupuestosRestantes <= 5 ? "#dc2626" : "#2a2a2a"}`,
+                      color:
+                        estadoCuenta.diasRestantes <= 5 ||
+                        estadoCuenta.presupuestosRestantes <= 5
+                          ? "#f87171"
+                          : "#888",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    <div>⏱ {estadoCuenta.diasRestantes} días restantes</div>
+                    <div>
+                      📋 {estadoCuenta.presupuestosRestantes} presupuestos
+                      restantes
+                    </div>
+                  </div>
+                )}
+
+              {estadoCuenta.soloLectura && (
                 <div
                   className="prueba-aviso"
                   style={{
-                    background:
-                      estadoCuenta.diasRestantes <= 5 ||
-                      estadoCuenta.presupuestosRestantes <= 5
-                        ? "#450a0a"
-                        : "#1a1a1a",
-                    border: `1px solid ${estadoCuenta.diasRestantes <= 5 || estadoCuenta.presupuestosRestantes <= 5 ? "#dc2626" : "#2a2a2a"}`,
-                    color:
-                      estadoCuenta.diasRestantes <= 5 ||
-                      estadoCuenta.presupuestosRestantes <= 5
-                        ? "#f87171"
-                        : "#888",
+                    background: "#450a0a",
+                    border: "1px solid #dc2626",
+                    color: "#f87171",
                     marginTop: "0.5rem",
                   }}
                 >
-                  <div>⏱ {estadoCuenta.diasRestantes} días restantes</div>
-                  <div>
-                    📋 {estadoCuenta.presupuestosRestantes} presupuestos
-                    restantes
+                  <div style={{ fontWeight: 600, marginBottom: "0.2rem" }}>
+                    ⛔ Acceso limitado
+                  </div>
+                  <div style={{ color: "#fca5a5", fontSize: "0.72rem" }}>
+                    {estadoCuenta.mensaje}
                   </div>
                 </div>
               )}
+            </div>
 
-            {estadoCuenta.soloLectura && (
-              <div
-                className="prueba-aviso"
-                style={{
-                  background: "#450a0a",
-                  border: "1px solid #dc2626",
-                  color: "#f87171",
-                  marginTop: "0.5rem",
-                }}
+            {/* Footer */}
+            <div className="sidebar-footer">
+              <button
+                className="sidebar-btn danger"
+                onClick={handleLogout}
+                data-tooltip="Cerrar sesión"
               >
-                <div style={{ fontWeight: 600, marginBottom: "0.2rem" }}>
-                  ⛔ Acceso limitado
-                </div>
-                <div style={{ color: "#fca5a5", fontSize: "0.72rem" }}>
-                  {estadoCuenta.mensaje}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="sidebar-footer">
-            <button
-              className="sidebar-btn danger"
-              onClick={handleLogout}
-              data-tooltip="Cerrar sesión"
-            >
-              <span className="btn-icon">🚪</span>
-              <span className="btn-label">Cerrar sesión</span>
-            </button>
-          </div>
-        </nav>
+                <span className="btn-icon">🚪</span>
+                <span className="btn-label">Cerrar sesión</span>
+              </button>
+            </div>
+          </nav>
+        )}
 
         {/* ── MAIN ── */}
         <div className="main-wrapper">
           {/* Header */}
-          <header className="main-header">
-            <div className="header-left">
-              <img
-                src="/logo-app.png"
-                alt="PresuPro"
-                style={{ height: "36px", objectFit: "contain" }}
-              />
-            </div>
-            <div className="header-titulo">
-              {SECCIONES.find((s) => s.id === seccion)?.icono && (
-                <span>{SECCIONES.find((s) => s.id === seccion)?.icono}</span>
-              )}
-              {TITULO_SECCION[seccion] || ""}
-            </div>
-            <div className="header-right">
-              <LogoNegocio size={36} />
-              <span
-                className="header-negocio-nombre"
-                style={{ fontSize: "1rem", fontWeight: 600, color: "#f0f0f0" }}
-              >
-                {nombreNegocio}
-              </span>
-            </div>
+          <header className={`main-header ${isMobile ? "mobile" : "desktop"}`}>
+            {!isMobile ? (
+              <>
+                <div className="header-left">
+                  <img
+                    src="/logo-app.png"
+                    alt="PresuPro"
+                    style={{ height: "36px", objectFit: "contain" }}
+                  />
+                </div>
+                <div className="header-titulo">
+                  {SECCIONES.find((s) => s.id === seccion)?.icono && (
+                    <span>
+                      {SECCIONES.find((s) => s.id === seccion)?.icono}
+                    </span>
+                  )}
+                  {TITULO_SECCION[seccion] || ""}
+                </div>
+                <div className="header-right">
+                  <LogoNegocio size={36} />
+                  <span
+                    className="header-negocio-nombre"
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight: 600,
+                      color: "#f0f0f0",
+                    }}
+                  >
+                    {nombreNegocio}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="header-left-mobile">
+                  {SECCIONES.find((s) => s.id === seccion)?.icono && (
+                    <span>
+                      {SECCIONES.find((s) => s.id === seccion)?.icono}
+                    </span>
+                  )}
+                  <span className="header-titulo-mobile">
+                    {TITULO_SECCION[seccion] || ""}
+                  </span>
+                </div>
+                <div className="header-right-mobile">
+                  <span className="header-negocio-nombre-mobile">
+                    {nombreNegocio}
+                  </span>
+                </div>
+              </>
+            )}
           </header>
 
           {/* Contenido */}
           <div
-            className={`main-content ${seccion === "perfil" || seccion === "presupuestos" ? "con-scroll" : ""}`}
+            className={`main-content ${seccion === "perfil" || seccion === "presupuestos" ? "con-scroll" : ""} ${isMobile ? "mobile" : ""}`}
           >
             {seccion === "presupuestos" && (
               <Presupuestos
@@ -520,6 +586,76 @@ export default function App() {
             {isAdmin && seccion === "admin" && <Admin />}
           </div>
         </div>
+
+        {/* ── NAVEGACIÓN INFERIOR (solo mobile) ── */}
+        {isMobile && (
+          <nav className="mobile-bottom-nav">
+            <button
+              className={`mobile-nav-btn ${seccion === "presupuestos" ? "active" : ""}`}
+              onClick={() => navegarA("presupuestos")}
+            >
+              <span className="mobile-nav-icon">📋</span>
+              <span className="mobile-nav-label">Presupuestos</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${seccion === "clientes" ? "active" : ""}`}
+              onClick={() => navegarA("clientes")}
+            >
+              <span className="mobile-nav-icon">👤</span>
+              <span className="mobile-nav-label">Clientes</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${seccion === "materiales" ? "active" : ""}`}
+              onClick={() => navegarA("materiales")}
+            >
+              <span className="mobile-nav-icon">🔩</span>
+              <span className="mobile-nav-label">Materiales</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${seccion === "servicios" ? "active" : ""}`}
+              onClick={() => navegarA("servicios")}
+            >
+              <span className="mobile-nav-icon">🔧</span>
+              <span className="mobile-nav-label">Servicios</span>
+            </button>
+            <button
+              className={`mobile-nav-btn ${menuMasAbierto ? "active" : ""}`}
+              onClick={() => setMenuMasAbierto(!menuMasAbierto)}
+            >
+              <span className="mobile-nav-icon">⋮</span>
+              <span className="mobile-nav-label">Más</span>
+            </button>
+
+            {/* Menú desplegable "Más" */}
+            {menuMasAbierto && (
+              <div className="mobile-more-menu" ref={menuMasRef}>
+                <button
+                  className="mobile-more-btn"
+                  onClick={() => navegarA("perfil")}
+                >
+                  <span className="mobile-more-icon">👤</span>
+                  <span>Editar perfil</span>
+                </button>
+                {isAdmin && (
+                  <button
+                    className="mobile-more-btn"
+                    onClick={() => navegarA("admin")}
+                  >
+                    <span className="mobile-more-icon">🛡️</span>
+                    <span>Panel Admin</span>
+                  </button>
+                )}
+                <button
+                  className="mobile-more-btn danger"
+                  onClick={handleLogout}
+                >
+                  <span className="mobile-more-icon">🚪</span>
+                  <span>Cerrar sesión</span>
+                </button>
+              </div>
+            )}
+          </nav>
+        )}
 
         {/* Modal de protección de datos */}
         <DirtyFormModal

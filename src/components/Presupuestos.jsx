@@ -72,11 +72,11 @@ export default function Presupuestos({ perfil, soloLectura }) {
       .from("presupuestos")
       .select(`*, clientes(nombre, apellido)`)
       .order("created_at", { ascending: false });
-    
+
     if (!verEliminados) {
       query = query.is("deleted_at", null);
     }
-    
+
     const [p, c, m, s, cat] = await Promise.all([
       query,
       supabase.from("clientes").select("*").order("apellido"),
@@ -308,7 +308,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
           setEditId(null);
           dirtyForm.markAsClean();
           window.currentDirtyForm = null;
-        }
+        },
       );
     } else {
       // No hay cambios, volver directamente
@@ -485,12 +485,12 @@ export default function Presupuestos({ perfil, soloLectura }) {
       .from("presupuestos")
       .update({ deleted_at: null })
       .eq("id", id);
-    
+
     // Actualizar el presupuesto actual localmente
     if (presupuestoActual && presupuestoActual.id === id) {
-      setPresupuestoActual(prev => ({ ...prev, deleted_at: null }));
+      setPresupuestoActual((prev) => ({ ...prev, deleted_at: null }));
     }
-    
+
     cargarTodo();
   }
 
@@ -591,6 +591,64 @@ export default function Presupuestos({ perfil, soloLectura }) {
     );
   }
 
+  // Versión móvil del badge de estado con íconos
+  function badgeEstadoMobile(estado) {
+    const configuraciones = {
+      borrador: {
+        icono: "📝",
+        texto: "Borrador",
+        fondo: "#2a2a2a",
+        color: "#888",
+        borde: "#444",
+      },
+      enviado: {
+        icono: "📤",
+        texto: "Enviado",
+        fondo: "#1e3a5f",
+        color: "#60a5fa",
+        borde: "#2563eb",
+      },
+      aprobado: {
+        icono: "👍",
+        texto: "Aprobado",
+        fondo: "#14532d",
+        color: "#4ade80",
+        borde: "#16a34a",
+      },
+      rechazado: {
+        icono: "👎",
+        texto: "Rechazado",
+        fondo: "#450a0a",
+        color: "#f87171",
+        borde: "#dc2626",
+      },
+    };
+    const config = configuraciones[estado] || configuraciones.borrador;
+    return (
+      <span
+        className="mobile-estado-badge"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.3rem",
+          padding: "0.25rem 0.6rem",
+          borderRadius: "12px",
+          background: config.fondo,
+          color: config.color,
+          border: `1px solid ${config.borde}`,
+          fontSize: "0.7rem",
+          fontWeight: "500",
+          lineHeight: "1",
+          whiteSpace: "nowrap",
+        }}
+        title={config.texto}
+      >
+        <span className="estado-icono">{config.icono}</span>
+        <span className="estado-texto">{config.texto}</span>
+      </span>
+    );
+  }
+
   if (cargando)
     return <p style={{ color: "#888", padding: "2rem" }}>Cargando...</p>;
 
@@ -610,10 +668,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
           }}
         >
           <div style={{ display: "flex", gap: "0.75rem" }}>
-            <button
-              className="btn btn-secondary"
-              onClick={volverAlListado}
-            >
+            <button className="btn btn-secondary" onClick={volverAlListado}>
               {"←"} Volver
             </button>
             {p.deleted_at ? (
@@ -636,7 +691,6 @@ export default function Presupuestos({ perfil, soloLectura }) {
                     className="btn btn-danger"
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log("Botón eliminar presionado, ID:", p.id);
                       setConfirmEliminar(p.id);
                     }}
                   >
@@ -859,7 +913,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                 </div>
               </div>
             </div>
-            
+
             {/* Segunda fila con línea horizontal abajo */}
             <div
               style={{
@@ -1582,7 +1636,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
         </div>
 
         {/* MODAL CONFIRMAR ELIMINAR */}
-        {console.log("Renderizando modal, confirmEliminar:", confirmEliminar) || confirmEliminar && (
+        {confirmEliminar && (
           <div className="modal-overlay">
             <div className="modal">
               <h3>¿Eliminar presupuesto?</h3>
@@ -1593,7 +1647,8 @@ export default function Presupuestos({ perfil, soloLectura }) {
                   margin: "0.5rem 0 1rem",
                 }}
               >
-                El presupuesto será marcado como eliminado pero podrá ser restaurado más tarde.
+                El presupuesto será marcado como eliminado pero podrá ser
+                restaurado más tarde.
               </p>
               <div className="modal-footer">
                 <button
@@ -1629,10 +1684,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
             flexShrink: 0,
           }}
         >
-          <button
-            className="btn btn-secondary"
-            onClick={volverAlListado}
-          >
+          <button className="btn btn-secondary" onClick={volverAlListado}>
             ← Cancelar
           </button>
           <button
@@ -2162,6 +2214,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
           style={{ flex: 1, margin: 0 }}
         />
         <label
+          className="mobile-checkbox-label"
           style={{
             display: "flex",
             alignItems: "center",
@@ -2178,11 +2231,14 @@ export default function Presupuestos({ perfil, soloLectura }) {
             onChange={(e) => setVerEliminados(e.target.checked)}
             style={{ margin: 0 }}
           />
-          Ver Eliminados
+          <span className="checkbox-text">
+            <span className="checkbox-main">Ver</span>
+            <span className="checkbox-sub">eliminados</span>
+          </span>
         </label>
         {!soloLectura && (
           <button
-            className="btn btn-primary"
+            className="btn btn-primary btn-mobile-two-lines"
             style={{ whiteSpace: "nowrap", flexShrink: 0 }}
             onClick={() => {
               setForm(FORM_VACIO);
@@ -2192,7 +2248,8 @@ export default function Presupuestos({ perfil, soloLectura }) {
               setVista("nuevo");
             }}
           >
-            + Nuevo presupuesto
+            <span className="btn-main-text">Nuevo</span>
+            <span className="btn-sub-text">presupuesto</span>
           </button>
         )}
       </div>
@@ -2203,74 +2260,292 @@ export default function Presupuestos({ perfil, soloLectura }) {
             No hay presupuestos todavía
           </p>
         ) : (
-          <table style={{ tableLayout: "fixed", width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={{ width: "8%" }}>Número</th>
-                <th style={{ width: "22%", textAlign: "left" }}>Cliente</th>
-                <th style={{ width: "12%" }}>Fecha</th>
-                <th style={{ width: "12%" }}>Estado</th>
-                <th style={{ width: "31%" }}>Observaciones</th>
-                <th style={{ width: "15%", textAlign: "right" }}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {presupuestosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={{ color: "#888" }}>
-                    No se encontraron presupuestos
-                  </td>
-                </tr>
-              ) : (
-                presupuestosFiltrados.map((p) => (
-                  <tr
-                    key={p.id}
-                    onClick={() => cargarDetalle(p.id)}
-                    style={{ 
-                      cursor: "pointer",
-                      ...(p.deleted_at ? { 
-                        color: "#999", 
-                        textDecoration: "line-through",
-                        opacity: 0.7 
-                      } : {})
-                    }}
-                    className={p.deleted_at ? "eliminado" : ""}
-                  >
-                    <td style={{ textAlign: "center", fontFamily: "monospace", fontWeight: "bold" }}>
-                      #{p.numero}
-                    </td>
-                    <td style={{ textAlign: "left" }}>
-                      {p.clientes ? (
-                        <span>
-                          {p.clientes.apellido}, {p.clientes.nombre}
-                        </span>
-                      ) : (
-                        <span style={{ color: "#888" }}>—</span>
-                      )}
-                      {p.deleted_at && (
-                        <span style={{ 
-                          fontSize: "0.7rem", 
-                          color: "#ff6b6b", 
-                          fontWeight: "bold",
-                          marginLeft: "0.5rem"
-                        }}>
-                          ELIMINADO
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.fecha}</td>
-                    <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{badgeEstado(p.estado)}</td>
-                    <td style={{ color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={p.observaciones || ""}>
-                      {p.observaciones || "—"}
-                    </td>
-                    <td style={{ textAlign: "right", fontFamily: "monospace" }}>
-                      ${parseFloat(p.total).toLocaleString("es-AR")}
-                    </td>
+          <>
+            {/* Vista Desktop */}
+            <div className="desktop-view">
+              <table style={{ tableLayout: "fixed", width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "8%" }}>Número</th>
+                    <th style={{ width: "22%", textAlign: "left" }}>Cliente</th>
+                    <th style={{ width: "12%" }}>Fecha</th>
+                    <th style={{ width: "12%" }}>Estado</th>
+                    <th style={{ width: "31%" }}>Observaciones</th>
+                    <th style={{ width: "15%", textAlign: "right" }}>Total</th>
                   </tr>
-                ))
+                </thead>
+                <tbody>
+                  {presupuestosFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" style={{ color: "#888" }}>
+                        No se encontraron presupuestos
+                      </td>
+                    </tr>
+                  ) : (
+                    presupuestosFiltrados.map((p) => (
+                      <tr
+                        key={p.id}
+                        onClick={() => cargarDetalle(p.id)}
+                        style={{
+                          cursor: "pointer",
+                          ...(p.deleted_at
+                            ? {
+                                color: "#999",
+                                textDecoration: "line-through",
+                                opacity: 0.7,
+                              }
+                            : {}),
+                        }}
+                        className={p.deleted_at ? "eliminado" : ""}
+                      >
+                        <td
+                          style={{
+                            textAlign: "center",
+                            fontFamily: "monospace",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          #{p.numero}
+                        </td>
+                        <td style={{ textAlign: "left" }}>
+                          {p.clientes ? (
+                            <span>
+                              {p.clientes.apellido}, {p.clientes.nombre}
+                            </span>
+                          ) : (
+                            <span style={{ color: "#888" }}>—</span>
+                          )}
+                          {p.deleted_at && (
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                color: "#ff6b6b",
+                                fontWeight: "bold",
+                                marginLeft: "0.5rem",
+                              }}
+                            >
+                              ELIMINADO
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {p.fecha}
+                        </td>
+                        <td
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {badgeEstado(p.estado)}
+                        </td>
+                        <td
+                          style={{
+                            color: "#888",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={p.observaciones || ""}
+                        >
+                          {p.observaciones || "—"}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          ${parseFloat(p.total).toLocaleString("es-AR")}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vista Mobile */}
+            <div className="mobile-view">
+              {presupuestosFiltrados.length === 0 ? (
+                <p style={{ color: "#888", padding: "1rem" }}>
+                  No se encontraron presupuestos
+                </p>
+              ) : (
+                <div className="mobile-presupuestos-list">
+                  {presupuestosFiltrados.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`mobile-presupuesto-item ${p.deleted_at ? "eliminado" : ""}`}
+                      onClick={() => cargarDetalle(p.id)}
+                      style={{
+                        cursor: "pointer",
+                        background: p.deleted_at ? "#1a1a1a" : "#1a1a1a",
+                        border: "1px solid #2a2a2a",
+                        borderRadius: "8px",
+                        padding: "0.75rem",
+                        marginBottom: "0.75rem",
+                        ...(p.deleted_at
+                          ? {
+                              opacity: 0.6,
+                              textDecoration: "line-through",
+                            }
+                          : {}),
+                      }}
+                    >
+                      {/* Fila 1: Nro + Apellido + Precio */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.8rem",
+                              fontWeight: "600",
+                              color: "#888",
+                              fontFamily: "monospace",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            #{p.numero}
+                          </span>
+                          <div
+                            style={{
+                              fontSize: "0.95rem",
+                              fontWeight: "600",
+                              color: "#f0f0f0",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              flex: 1,
+                              marginLeft: "0.5rem",
+                            }}
+                          >
+                            {p.clientes ? p.clientes.apellido : "—"}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "1.1rem",
+                            fontWeight: "700",
+                            color: "#4ade80",
+                            fontFamily: "monospace",
+                            flexShrink: 0,
+                            marginLeft: "0.75rem",
+                          }}
+                        >
+                          ${parseFloat(p.total).toLocaleString("es-AR")}
+                        </div>
+                      </div>
+
+                      {/* Fila 2: Fecha + Nombre + Estado */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "#888",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {p.fecha}
+                          </span>
+                          <div
+                            style={{
+                              fontSize: "0.85rem",
+                              color: "#ccc",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              flex: 1,
+                              marginLeft: `${0.5 + parseFloat(p.total).toString().length * 0.03}rem`,
+                            }}
+                          >
+                            {p.clientes ? p.clientes.nombre : "—"}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            flexShrink: 0,
+                            marginLeft: "0.5rem",
+                          }}
+                        >
+                          {badgeEstadoMobile(p.estado)}
+                        </div>
+                      </div>
+
+                      {/* Fila 3: Observaciones */}
+                      {p.observaciones && (
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#666",
+                            fontStyle: "italic",
+                            lineHeight: "1.4",
+                            wordBreak: "break-word",
+                            marginTop: "0.5rem",
+                            paddingTop: "0.5rem",
+                            borderTop: "1px solid #2a2a2a",
+                          }}
+                        >
+                          {p.observaciones}
+                        </div>
+                      )}
+
+                      {/* Estado eliminado */}
+                      {p.deleted_at && (
+                        <div
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#ff6b6b",
+                            fontWeight: "bold",
+                            marginTop: "0.25rem",
+                          }}
+                        >
+                          ELIMINADO
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </div>
