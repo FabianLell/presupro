@@ -729,16 +729,16 @@ td .btn {
   margin-bottom: 0.75rem;
 }
 
-.card>*+* {
+.card > * + * {
   margin-top: 0.5rem;
 }
 
-.card>.form-row {
+.card > .form-row {
   margin-top: 0.5rem;
   margin-bottom: 0;
 }
 
-.card>.form-row+* {
+.card > .form-row + * {
   margin-top: 0.5rem;
 }
 
@@ -784,7 +784,6 @@ td .btn {
 }
 
 @media print {
-
   .sidebar,
   .main-header {
     display: none !important;
@@ -872,4 +871,233 @@ td .btn {
 .btn-plus:hover {
   transform: scale(1.08);
   box-shadow: 0 4px 12px rgba(44, 123, 229, 0.4);
+}
+
+/* ── MOBILE RESPONSIVE ───────────────────────── */
+
+/* App container mobile adjustments */
+.app.mobile {
+  flex-direction: column;
+}
+
+.app.mobile .main-wrapper {
+  width: 100%;
+  flex: 1;
+}
+
+/* Hide sidebar completely on mobile */
+.app.mobile .sidebar {
+  display: none !important;
+}
+
+/* Mobile header */
+.main-header.mobile {
+  padding: 0.5rem 0.75rem;
+  min-height: 48px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.header-left-mobile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.header-titulo-mobile {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f0f0f0;
+}
+
+.header-right-mobile {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header-negocio-nombre-mobile {
+  color: #888;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* Mobile main content */
+.main-content.mobile {
+  padding: 0.5rem 0.75rem;
+  padding-bottom: 80px; /* Space for bottom nav */
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Mobile bottom navigation */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  justify-content: space-around;
+  padding: 0.25rem 0;
+  z-index: 20;
+  height: 60px;
+}
+
+.mobile-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: all 0.15s;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.mobile-nav-btn:hover {
+  color: #fff;
+  background: #2a2a2a;
+}
+
+.mobile-nav-btn.active {
+  color: #2563eb;
+  background: #1e3a5f;
+}
+
+.mobile-nav-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+  margin-bottom: 0.2rem;
+}
+
+.mobile-nav-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* Mobile "Más" dropdown menu */
+.mobile-more-menu {
+  position: absolute;
+  bottom: 65px;
+  right: 0.5rem;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.5rem;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 25;
+}
+
+.mobile-more-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.mobile-more-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+.mobile-more-btn.danger {
+  color: #f87171;
+}
+
+.mobile-more-btn.danger:hover {
+  background: #450a0a;
+  color: #f87171;
+}
+
+.mobile-more-icon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+}
+
+/* Desktop adjustments (ensure desktop still works) */
+.app.desktop .mobile-bottom-nav {
+  display: none;
+}
+
+.app.desktop .main-header.mobile {
+  display: none;
+}
+
+.app.desktop .main-header.desktop {
+  display: flex;
+}
+
+.app.desktop .main-content.mobile {
+  padding: 0.75rem 1rem 0;
+  padding-bottom: 1rem;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .app.mobile .main-wrapper {
+    height: calc(100vh - 60px); /* Account for bottom nav */
+  }
+
+  .app.mobile .main-content.mobile {
+    height: calc(100% - 48px); /* Account for header */
+  }
+
+  /* Ensure no horizontal scroll on mobile */
+  .app.mobile * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Adjust form layouts for mobile */
+  .app.mobile .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  /* Adjust tables for mobile */
+  .app.mobile .md-list-area {
+    padding-right: 0;
+  }
+
+  .app.mobile .md-list-area table {
+    font-size: 0.8rem;
+  }
+
+  .app.mobile .md-list-area thead th,
+  .app.mobile .md-list-area tbody td {
+    padding: 0.3rem 0.4rem;
+  }
 }
