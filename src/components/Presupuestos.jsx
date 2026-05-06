@@ -591,33 +591,60 @@ export default function Presupuestos({ perfil, soloLectura }) {
     );
   }
 
-  // Versión móvil del indicador de estado
-  function indicadorEstadoMobile(estado) {
+  // Versión móvil del badge de estado con íconos
+  function badgeEstadoMobile(estado) {
     const configuraciones = {
-      borrador: { letra: "B", color: "#888", fondo: "#2a2a2a" },
-      enviado: { letra: "E", color: "#60a5fa", fondo: "#1e3a5f" },
-      aprobado: { letra: "A", color: "#4ade80", fondo: "#14532d" },
-      rechazado: { letra: "R", color: "#f87171", fondo: "#450a0a" },
+      borrador: {
+        icono: "📝",
+        texto: "Borrador",
+        fondo: "#2a2a2a",
+        color: "#888",
+        borde: "#444",
+      },
+      enviado: {
+        icono: "📤",
+        texto: "Enviado",
+        fondo: "#1e3a5f",
+        color: "#60a5fa",
+        borde: "#2563eb",
+      },
+      aprobado: {
+        icono: "👍",
+        texto: "Aprobado",
+        fondo: "#14532d",
+        color: "#4ade80",
+        borde: "#16a34a",
+      },
+      rechazado: {
+        icono: "👎",
+        texto: "Rechazado",
+        fondo: "#450a0a",
+        color: "#f87171",
+        borde: "#dc2626",
+      },
     };
     const config = configuraciones[estado] || configuraciones.borrador;
     return (
       <span
+        className="mobile-estado-badge"
         style={{
           display: "inline-flex",
           alignItems: "center",
-          justifyContent: "center",
-          width: "24px",
-          height: "24px",
-          borderRadius: "50%",
+          gap: "0.3rem",
+          padding: "0.25rem 0.6rem",
+          borderRadius: "12px",
           background: config.fondo,
           color: config.color,
+          border: `1px solid ${config.borde}`,
           fontSize: "0.7rem",
-          fontWeight: "700",
+          fontWeight: "500",
           lineHeight: "1",
+          whiteSpace: "nowrap",
         }}
-        title={estado.charAt(0).toUpperCase() + estado.slice(1)}
+        title={config.texto}
       >
-        {config.letra}
+        <span className="estado-icono">{config.icono}</span>
+        <span className="estado-texto">{config.texto}</span>
       </span>
     );
   }
@@ -2187,6 +2214,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
           style={{ flex: 1, margin: 0 }}
         />
         <label
+          className="mobile-checkbox-label"
           style={{
             display: "flex",
             alignItems: "center",
@@ -2203,11 +2231,14 @@ export default function Presupuestos({ perfil, soloLectura }) {
             onChange={(e) => setVerEliminados(e.target.checked)}
             style={{ margin: 0 }}
           />
-          Ver Eliminados
+          <span className="checkbox-text">
+            <span className="checkbox-main">Ver</span>
+            <span className="checkbox-sub">eliminados</span>
+          </span>
         </label>
         {!soloLectura && (
           <button
-            className="btn btn-primary"
+            className="btn btn-primary btn-mobile-two-lines"
             style={{ whiteSpace: "nowrap", flexShrink: 0 }}
             onClick={() => {
               setForm(FORM_VACIO);
@@ -2217,7 +2248,8 @@ export default function Presupuestos({ perfil, soloLectura }) {
               setVista("nuevo");
             }}
           >
-            + Nuevo presupuesto
+            <span className="btn-main-text">Nuevo</span>
+            <span className="btn-sub-text">presupuesto</span>
           </button>
         )}
       </div>
@@ -2368,7 +2400,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                           : {}),
                       }}
                     >
-                      {/* Fila principal: Cliente, Total, Estado */}
+                      {/* Fila 1: Nro + Apellido + Precio */}
                       <div
                         style={{
                           display: "flex",
@@ -2377,77 +2409,107 @@ export default function Presupuestos({ perfil, soloLectura }) {
                           marginBottom: "0.5rem",
                         }}
                       >
-                        <div
-                          style={{
-                            flex: 1,
-                            minWidth: 0,
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: "0.9rem",
-                              fontWeight: "600",
-                              color: "#f0f0f0",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {p.clientes
-                              ? `${p.clientes.apellido}, ${p.clientes.nombre}`
-                              : "—"}
-                          </div>
-                          {p.deleted_at && (
-                            <div
-                              style={{
-                                fontSize: "0.7rem",
-                                color: "#ff6b6b",
-                                fontWeight: "bold",
-                                marginTop: "0.2rem",
-                              }}
-                            >
-                              ELIMINADO
-                            </div>
-                          )}
-                        </div>
                         <div
                           style={{
                             display: "flex",
                             alignItems: "center",
                             gap: "0.5rem",
-                            flexShrink: 0,
+                            flex: 1,
+                            minWidth: 0,
                           }}
                         >
-                          <div
+                          <span
                             style={{
-                              fontSize: "1rem",
-                              fontWeight: "700",
-                              color: "#4ade80",
+                              fontSize: "0.8rem",
+                              fontWeight: "600",
+                              color: "#888",
                               fontFamily: "monospace",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            ${parseFloat(p.total).toLocaleString("es-AR")}
+                            #{p.numero}
+                          </span>
+                          <div
+                            style={{
+                              fontSize: "0.95rem",
+                              fontWeight: "600",
+                              color: "#f0f0f0",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              flex: 1,
+                              marginLeft: "0.5rem",
+                            }}
+                          >
+                            {p.clientes ? p.clientes.apellido : "—"}
                           </div>
-                          {indicadorEstadoMobile(p.estado)}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "1.1rem",
+                            fontWeight: "700",
+                            color: "#4ade80",
+                            fontFamily: "monospace",
+                            flexShrink: 0,
+                            marginLeft: "0.75rem",
+                          }}
+                        >
+                          ${parseFloat(p.total).toLocaleString("es-AR")}
                         </div>
                       </div>
 
-                      {/* Fila secundaria: Número, Fecha */}
+                      {/* Fila 2: Fecha + Nombre + Estado */}
                       <div
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
                           marginBottom: "0.5rem",
-                          fontSize: "0.8rem",
-                          color: "#888",
                         }}
                       >
-                        <span>#{p.numero}</span>
-                        <span>{p.fecha}</span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "#888",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {p.fecha}
+                          </span>
+                          <div
+                            style={{
+                              fontSize: "0.85rem",
+                              color: "#ccc",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              flex: 1,
+                              marginLeft: `${0.5 + parseFloat(p.total).toString().length * 0.03}rem`,
+                            }}
+                          >
+                            {p.clientes ? p.clientes.nombre : "—"}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            flexShrink: 0,
+                            marginLeft: "0.5rem",
+                          }}
+                        >
+                          {badgeEstadoMobile(p.estado)}
+                        </div>
                       </div>
 
-                      {/* Fila de observaciones (si existen) */}
+                      {/* Fila 3: Observaciones */}
                       {p.observaciones && (
                         <div
                           style={{
@@ -2462,6 +2524,20 @@ export default function Presupuestos({ perfil, soloLectura }) {
                           }}
                         >
                           {p.observaciones}
+                        </div>
+                      )}
+
+                      {/* Estado eliminado */}
+                      {p.deleted_at && (
+                        <div
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#ff6b6b",
+                            fontWeight: "bold",
+                            marginTop: "0.25rem",
+                          }}
+                        >
+                          ELIMINADO
                         </div>
                       )}
                     </div>

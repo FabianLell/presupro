@@ -1121,6 +1121,74 @@ td .btn {
   .desktop-view {
     display: none;
   }
+
+  /* Botones de dos líneas para mobile */
+  .btn-mobile-two-lines {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 80px !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .btn-main-text {
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+  }
+
+  .btn-sub-text {
+    font-size: 0.65rem !important;
+    opacity: 0.9 !important;
+    margin-top: 1px !important;
+  }
+
+  /* Checkbox de dos líneas */
+  .mobile-checkbox-label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    font-size: 0.75rem !important;
+    min-width: 70px !important;
+  }
+
+  .checkbox-text {
+    display: flex !important;
+    flex-direction: column !important;
+    line-height: 1.1 !important;
+  }
+
+  .checkbox-main {
+    font-weight: 500 !important;
+    font-size: 0.8rem !important;
+  }
+
+  .checkbox-sub {
+    font-size: 0.65rem !important;
+    opacity: 0.9 !important;
+  }
+
+  /* Badges de estado mobile */
+  .mobile-estado-badge {
+    transition: all 0.2s ease !important;
+  }
+
+  .mobile-estado-badge:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .estado-icono {
+    font-size: 0.8rem !important;
+    line-height: 1 !important;
+  }
+
+  .estado-texto {
+    font-weight: 500 !important;
+    font-size: 0.65rem !important;
+  }
 }
 
 /* Estilos para lista móvil de presupuestos */
