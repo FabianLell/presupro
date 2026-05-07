@@ -1105,6 +1105,154 @@ td .btn {
 
 /* ── PRESUPUESTOS MOBILE VIEW ───────────────────── */
 
+/* ── MATERIALES MOBILE VIEW ─────────────────── */
+
+.app.mobile .md-form-area {
+  padding: 0.3rem;
+}
+
+.app.mobile .md-form-header {
+  margin-bottom: 0.3rem;
+}
+
+.app.mobile .md-form-header h2 {
+  font-size: 1rem;
+  margin-bottom: 0.3rem;
+}
+
+.app.mobile .form-row {
+  margin-bottom: 0.15rem;
+}
+
+.app.mobile .form-row input,
+.app.mobile .form-row select {
+  padding: 0.35rem 0.4rem;
+  font-size: 0.9rem;
+  height: 38px;
+}
+
+.app.mobile .md-form-area input[name="descripcion"],
+.app.mobile .md-form-area input[name="precio_unitario"] {
+  margin-bottom: 0.2rem;
+}
+
+.app.mobile .md-search-area {
+  padding: 0.3rem;
+  margin-bottom: 0.3rem;
+}
+
+.app.mobile .md-search-area > div {
+  gap: 0.3rem;
+}
+
+.app.mobile .md-search-area input {
+  flex: 1;
+  padding: 0.4rem;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.app.mobile .md-search-area label {
+  font-size: 0.7rem;
+  gap: 0.2rem;
+  white-space: normal;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  min-width: 50px !important;
+}
+
+.app.mobile .md-search-area label input[type="checkbox"] {
+  margin-bottom: 0.1rem;
+}
+
+.app.mobile .md-search-area label span {
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* Botón categorías vertical */
+.app.mobile .md-search-area button {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 0.3rem 0.4rem !important;
+  font-size: 0.65rem !important;
+  min-width: 50px !important;
+  gap: 0.2rem !important;
+}
+
+.app.mobile .md-search-area button span:first-child {
+  font-size: 1rem !important;
+}
+
+.app.mobile .md-search-area button span:last-child {
+  text-align: center;
+  line-height: 1.1;
+}
+
+.app.mobile .md-list-area {
+  padding: 0.5rem;
+}
+
+.app.mobile .md-list-area table {
+  font-size: 0.85rem;
+}
+
+.app.mobile .md-list-area th,
+.app.mobile .md-list-area td {
+  padding: 0.25rem 0.3rem;
+}
+
+.app.mobile .md-list-area th {
+  font-size: 0.8rem;
+}
+
+.app.mobile .md-list-area td {
+  font-size: 0.8rem;
+}
+
+/* Vista móvil de materiales con cards */
+.app.mobile .mobile-materiales-list {
+  padding: 0.2rem;
+}
+
+.app.mobile .mobile-material-item {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 0.6rem;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.app.mobile .mobile-material-item:hover {
+  background: #222;
+  border-color: #333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.app.mobile .mobile-material-item.selected {
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+
+.app.mobile .mobile-material-item.eliminado {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+/* Eliminar restricciones de ancho en contenedor principal */
+.app.mobile .md-list-area {
+  padding: 0.2rem !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+
 /* Ocultar vistas según dispositivo */
 .mobile-view {
   display: none;
@@ -1147,28 +1295,36 @@ td .btn {
   }
 
   /* Checkbox de dos líneas */
-  .mobile-checkbox-label {
+  .app.mobile .mobile-checkbox-label {
     display: flex !important;
     align-items: center !important;
-    gap: 0.5rem !important;
-    font-size: 0.75rem !important;
-    min-width: 70px !important;
+    gap: 0.3rem !important;
+    font-size: 0.7rem !important;
+    min-width: 60px !important;
   }
 
-  .checkbox-text {
+  .app.mobile .checkbox-text {
     display: flex !important;
     flex-direction: column !important;
     line-height: 1.1 !important;
   }
 
-  .checkbox-main {
+  .app.mobile .checkbox-main {
     font-weight: 500 !important;
-    font-size: 0.8rem !important;
+    font-size: 0.75rem !important;
   }
 
-  .checkbox-sub {
-    font-size: 0.65rem !important;
+  .app.mobile .checkbox-sub {
+    font-size: 0.6rem !important;
     opacity: 0.9 !important;
+  }
+
+  /* Botón categorías compacto */
+  .app.mobile .md-search-area button {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    grid-template-columns: auto 1fr !important;
+    gap: 0.3rem !important;
   }
 
   /* Badges de estado mobile */
