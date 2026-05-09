@@ -138,6 +138,7 @@ export default function Materiales({ soloLectura }) {
     const { data } = await supabase
       .from("categorias")
       .select("id, nombre")
+      .is("deleted_at", null)
       .order("nombre");
 
     setCategorias(data || []);
@@ -406,7 +407,11 @@ export default function Materiales({ soloLectura }) {
 
   async function eliminarCategoria(id) {
     if (!confirm("¿Eliminar esta categoría?")) return;
-    const { error } = await supabase.from("categorias").delete().eq("id", id);
+    // Soft delete: actualizar deleted_at en lugar de borrar
+    const { error } = await supabase
+      .from("categorias")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
     if (error) return setErrorCategoria("Error al eliminar");
     setCategorias((prev) => prev.filter((c) => c.id !== id));
   }
