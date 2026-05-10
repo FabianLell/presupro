@@ -102,9 +102,11 @@ export default function Onboarding({ onComplete }) {
       if (matsAInsertar.length > 0) {
         await supabase.from("materiales").insert(
           matsAInsertar.map((m) => {
-            const nombreCat = m.rubro_categoria_id
-              ? mapaRubroCats[m.rubro_categoria_id]
-              : null;
+            // Obtener el nombre de la categoría desde rubro_categorias usando rubro_categoria_id
+            const categoriaRubro = (rubroCats || []).find(
+              (rc) => rc.id === m.rubro_categoria_id,
+            );
+            const nombreCat = categoriaRubro?.nombre || null;
             const categoriaId = nombreCat
               ? mapaCats[nombreCat.toLowerCase()]
               : null;
