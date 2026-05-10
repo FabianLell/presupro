@@ -136,19 +136,22 @@ body {
   align-items: center;
   gap: 0.65rem;
   padding: 0.6rem 0.75rem;
-  background: transparent;
-  border: none;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  border: 1px solid #374151;
   border-radius: 6px;
-  color: #ccc;
+  color: #d1d5db;
   cursor: pointer;
   font-size: 0.92rem;
   transition:
     background 0.15s,
-    color 0.15s;
+    color 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar.colapsado .sidebar-btn {
@@ -156,22 +159,38 @@ body {
 }
 
 .sidebar-btn:hover {
-  background: #2a2a2a;
-  color: #fff;
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  color: #ffffff;
+  border-color: #4b5563;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-btn.active {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #fff;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.sidebar-btn.active:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  border-color: #2563eb;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
 }
 
 .sidebar-btn.danger {
   color: #f87171;
+  border-color: #dc2626;
+  background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%);
 }
 
 .sidebar-btn.danger:hover {
-  background: #450a0a;
-  color: #f87171;
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+  color: #fca5a5;
+  border-color: #ef4444;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
 }
 
 .sidebar-btn .btn-icon {
@@ -545,51 +564,85 @@ textarea:read-only:focus {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 .btn:hover {
-  opacity: 0.88;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #fff;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
 }
 
 .btn-danger {
-  background: #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   color: #fff;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4);
 }
 
 .btn-secondary {
-  background: #2a2a2a;
-  color: #ccc;
-  border: 1px solid #333;
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  color: #f3f4f6;
+  border: 1px solid #6b7280;
+  box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
 }
 
 .btn-secondary:hover {
-  background: #333;
-  color: #fff;
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  color: #ffffff;
+  border-color: #9ca3af;
+  box-shadow: 0 4px 8px rgba(107, 114, 128, 0.4);
 }
 
 .btn-ghost {
-  background: transparent;
-  color: #888;
-  border: 1px solid #333;
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  color: #d1d5db;
+  border: 1px solid #4b5563;
+  box-shadow: 0 2px 4px rgba(75, 85, 99, 0.2);
 }
 
 .btn-ghost:hover {
-  background: #222;
-  color: #fff;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  color: #ffffff;
+  border-color: #6b7280;
+  box-shadow: 0 4px 8px rgba(75, 85, 99, 0.3);
 }
 
 td .btn {
   padding: 0.35rem 0.55rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+td .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ── BADGES ────────────────────────────────── */
@@ -853,7 +906,7 @@ td .btn {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #2c7be5;
+  background: linear-gradient(135deg, #2c7be5 0%, #1e40af 100%);
   color: white;
   border: none;
   font-size: 18px;
@@ -866,11 +919,18 @@ td .btn {
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
+  box-shadow: 0 2px 4px rgba(44, 123, 229, 0.3);
+  position: relative;
 }
 
 .btn-plus:hover {
-  transform: scale(1.08);
-  box-shadow: 0 4px 12px rgba(44, 123, 229, 0.4);
+  transform: scale(1.08) translateY(-1px);
+  box-shadow: 0 6px 16px rgba(44, 123, 229, 0.4);
+}
+
+.btn-plus:active {
+  transform: scale(1.02) translateY(0);
+  box-shadow: 0 2px 6px rgba(44, 123, 229, 0.3);
 }
 
 /* ── MOBILE RESPONSIVE ───────────────────────── */
@@ -959,9 +1019,9 @@ td .btn {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
-  color: #888;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  border: 1px solid #374151;
+  color: #d1d5db;
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 6px;
@@ -969,16 +1029,28 @@ td .btn {
   flex: 1;
   min-width: 0;
   position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .mobile-nav-btn:hover {
-  color: #fff;
-  background: #2a2a2a;
+  color: #ffffff;
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  border-color: #4b5563;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .mobile-nav-btn.active {
-  color: #2563eb;
-  background: #1e3a5f;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #3b82f6;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.mobile-nav-btn.active:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  border-color: #2563eb;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
 }
 
 .mobile-nav-icon {
@@ -1003,8 +1075,8 @@ td .btn {
   position: absolute;
   bottom: 65px;
   right: 0.5rem;
-  background: #2a2a2a;
-  border: 1px solid #444;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  border: 1px solid #374151;
   border-radius: 8px;
   padding: 0.5rem;
   min-width: 160px;
@@ -1017,29 +1089,39 @@ td .btn {
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  background: transparent;
-  border: none;
-  color: #ccc;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  border: 1px solid #374151;
+  color: #d1d5db;
   cursor: pointer;
   padding: 0.6rem 0.75rem;
   border-radius: 6px;
   font-size: 0.85rem;
   transition: all 0.15s;
   text-align: left;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 .mobile-more-btn:hover {
-  background: #333;
-  color: #fff;
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  color: #ffffff;
+  border-color: #4b5563;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .mobile-more-btn.danger {
   color: #f87171;
+  border-color: #dc2626;
+  background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%);
 }
 
 .mobile-more-btn.danger:hover {
-  background: #450a0a;
-  color: #f87171;
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+  color: #fca5a5;
+  border-color: #ef4444;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
 }
 
 .mobile-more-icon {
@@ -1266,7 +1348,7 @@ td .btn {
   .mobile-view {
     display: block;
   }
-  
+
   .desktop-view {
     display: none;
   }
@@ -1401,19 +1483,19 @@ td .btn {
     padding: 0.6rem;
     margin-bottom: 0.6rem;
   }
-  
+
   .mobile-presupuesto-item .cliente-nombre {
     font-size: 0.85rem;
   }
-  
+
   .mobile-presupuesto-item .presupuesto-total {
     font-size: 0.9rem;
   }
-  
+
   .mobile-presupuesto-item .presupuesto-fecha {
     font-size: 0.75rem;
   }
-  
+
   .mobile-presupuesto-item .observaciones-text {
     font-size: 0.7rem;
   }
@@ -1424,11 +1506,11 @@ td .btn {
     padding: 0.5rem;
     margin-bottom: 0.5rem;
   }
-  
+
   .mobile-presupuesto-item .cliente-nombre {
     font-size: 0.8rem;
   }
-  
+
   .mobile-presupuesto-item .presupuesto-total {
     font-size: 0.85rem;
   }
