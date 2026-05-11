@@ -1334,7 +1334,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                 </div>
               )}
               <div
-                style={{ fontSize: "12px", lineHeight: "1.8", color: "#333" }}
+                style={{ fontSize: "12px", lineHeight: "1.8", color: "#000" }}
               >
                 {perfil?.cuil_cuit && <p>CUIL: {perfil.cuil_cuit}</p>}
                 {perfil?.direccion && <p>{perfil.direccion}</p>}
@@ -1345,7 +1345,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
             <div style={{ textAlign: "right" }}>
               <h1
                 style={{
-                  fontSize: "28px",
+                  fontSize: "22.4px",
                   margin: 0,
                   letterSpacing: "2px",
                   color: "#000",
@@ -1353,10 +1353,10 @@ export default function Presupuestos({ perfil, soloLectura }) {
               >
                 PRESUPUESTO
               </h1>
-              <p style={{ fontSize: "10px", color: "#555", margin: "4px 0" }}>
+              <p style={{ fontSize: "10px", color: "#000", margin: "4px 0" }}>
                 DOCUMENTO NO VÁLIDO COMO FACTURA
               </p>
-              <p style={{ fontSize: "12px", color: "#333", margin: 0 }}>
+              <p style={{ fontSize: "12px", color: "#000", margin: 0 }}>
                 {new Date(presupuestoActual.fecha + "T12:00:00")
                   .toLocaleDateString("es-AR", {
                     weekday: "long",
@@ -1373,33 +1373,40 @@ export default function Presupuestos({ perfil, soloLectura }) {
               borderBottom: "2px solid #333",
               paddingBottom: "10px",
               marginBottom: "16px",
+              textAlign: "left",
             }}
           >
-            <p>
+            <p style={{ textAlign: "left", margin: 0 }}>
               <strong>Cliente:</strong>{" "}
-              {cliente ? `${cliente.apellido}, ${cliente.nombre}` : "—"}
+              {cliente ? `${cliente.apellido} ${cliente.nombre}` : "—"}
               {cliente?.telefono && (
-                <span style={{ marginLeft: "24px" }}>
-                  Tel: {cliente.telefono}
+                <span>
+                  {" "}
+                  - <strong>Teléfono:</strong> {cliente.telefono}
                 </span>
               )}
+              {cliente?.telefono && cliente?.direccion && <br />}
               {cliente?.direccion && (
-                <span style={{ marginLeft: "24px" }}>{cliente.direccion}</span>
+                <span>
+                  <strong>Dirección.:</strong> {cliente.direccion}
+                </span>
               )}
             </p>
             {presupuestoActual.observaciones && (
-              <p style={{ marginTop: "6px", color: "#444" }}>
+              <p
+                style={{ marginTop: "6px", color: "#000", textAlign: "center" }}
+              >
                 {presupuestoActual.observaciones}
               </p>
             )}
           </div>
           {presupuestoActual.items_materiales?.length > 0 && (
-            <div style={{ marginBottom: "16px" }}>
+            <div style={{ marginBottom: "8px" }}>
               <h2
                 style={{
                   fontSize: "13px",
                   fontWeight: "bold",
-                  marginBottom: "8px",
+                  marginBottom: "4px",
                   color: "#333",
                 }}
               >
@@ -1416,45 +1423,50 @@ export default function Presupuestos({ perfil, soloLectura }) {
                   <tr style={{ background: "#f0f0f0" }}>
                     <th
                       style={{
-                        padding: "6px 8px",
+                        padding: "2px 4px",
                         textAlign: "left",
-                        border: "1px solid #ddd",
+                        border: "1px solid #666",
+                        color: "#000",
                       }}
                     >
                       Material
                     </th>
                     <th
                       style={{
-                        padding: "6px 8px",
+                        padding: "2px 2px",
                         textAlign: "center",
-                        border: "1px solid #ddd",
+                        border: "1px solid #666",
+                        color: "#000",
                       }}
                     >
                       Unidad
                     </th>
                     <th
                       style={{
-                        padding: "6px 8px",
+                        padding: "2px 2px",
                         textAlign: "center",
-                        border: "1px solid #ddd",
+                        border: "1px solid #666",
+                        color: "#000",
                       }}
                     >
                       Cantidad
                     </th>
                     <th
                       style={{
-                        padding: "6px 8px",
+                        padding: "2px 4px",
                         textAlign: "right",
-                        border: "1px solid #ddd",
+                        border: "1px solid #666",
+                        color: "#000",
                       }}
                     >
                       Precio unit.
                     </th>
                     <th
                       style={{
-                        padding: "6px 8px",
+                        padding: "2px 4px",
                         textAlign: "right",
-                        border: "1px solid #ddd",
+                        border: "1px solid #666",
+                        color: "#000",
                       }}
                     >
                       Subtotal
@@ -1468,42 +1480,51 @@ export default function Presupuestos({ perfil, soloLectura }) {
                       style={{ background: idx % 2 === 0 ? "#fff" : "#fafafa" }}
                     >
                       <td
-                        style={{ padding: "5px 8px", border: "1px solid #ddd" }}
+                        style={{
+                          padding: "1px 3px",
+                          border: "1px solid #666",
+                          color: "#000",
+                          textAlign: "left",
+                        }}
                       >
                         {i.materiales?.nombre}
                       </td>
                       <td
                         style={{
-                          padding: "5px 8px",
-                          border: "1px solid #ddd",
+                          padding: "1px 1px",
+                          border: "1px solid #666",
                           textAlign: "center",
+                          color: "#000",
                         }}
                       >
                         {i.materiales?.unidad}
                       </td>
                       <td
                         style={{
-                          padding: "5px 8px",
-                          border: "1px solid #ddd",
+                          padding: "1px 1px",
+                          border: "1px solid #666",
                           textAlign: "center",
+                          color: "#000",
                         }}
                       >
                         {i.cantidad}
                       </td>
                       <td
                         style={{
-                          padding: "5px 8px",
-                          border: "1px solid #ddd",
+                          padding: "1px 3px",
+                          border: "1px solid #666",
                           textAlign: "right",
+                          color: "#000",
                         }}
                       >
                         ${parseFloat(i.precio_unitario).toLocaleString("es-AR")}
                       </td>
                       <td
                         style={{
-                          padding: "5px 8px",
-                          border: "1px solid #ddd",
+                          padding: "1px 3px",
+                          border: "1px solid #666",
                           textAlign: "right",
+                          color: "#000",
                         }}
                       >
                         ${parseFloat(i.subtotal).toLocaleString("es-AR")}
@@ -1529,12 +1550,12 @@ export default function Presupuestos({ perfil, soloLectura }) {
             </div>
           )}
           {presupuestoActual.items_servicios?.length > 0 && (
-            <div style={{ marginBottom: "16px" }}>
+            <div style={{ marginBottom: "8px" }}>
               <h2
                 style={{
                   fontSize: "13px",
                   fontWeight: "bold",
-                  marginBottom: "8px",
+                  marginBottom: "4px",
                   color: "#333",
                 }}
               >
@@ -1551,27 +1572,30 @@ export default function Presupuestos({ perfil, soloLectura }) {
                   <tr style={{ background: "#f0f0f0" }}>
                     <th
                       style={{
-                        padding: "6px 8px",
+                        padding: "2px 4px",
                         textAlign: "left",
-                        border: "1px solid #ddd",
+                        border: "1px solid #666",
+                        color: "#000",
                       }}
                     >
                       Servicio
                     </th>
                     <th
                       style={{
-                        padding: "6px 8px",
-                        textAlign: "left",
-                        border: "1px solid #ddd",
+                        padding: "2px 4px",
+                        textAlign: "center",
+                        border: "1px solid #666",
+                        color: "#000",
                       }}
                     >
                       Descripción
                     </th>
                     <th
                       style={{
-                        padding: "6px 8px",
+                        padding: "2px 4px",
                         textAlign: "right",
-                        border: "1px solid #ddd",
+                        border: "1px solid #666",
+                        color: "#000",
                       }}
                     >
                       Precio
@@ -1585,24 +1609,30 @@ export default function Presupuestos({ perfil, soloLectura }) {
                       style={{ background: idx % 2 === 0 ? "#fff" : "#fafafa" }}
                     >
                       <td
-                        style={{ padding: "5px 8px", border: "1px solid #ddd" }}
+                        style={{
+                          padding: "1px 3px",
+                          border: "1px solid #666",
+                          color: "#000",
+                          textAlign: "left",
+                        }}
                       >
                         {i.servicios?.nombre}
                       </td>
                       <td
                         style={{
-                          padding: "5px 8px",
-                          border: "1px solid #ddd",
-                          color: "#555",
+                          padding: "1px 3px",
+                          border: "1px solid #666",
+                          color: "#000",
                         }}
                       >
                         {i.descripcion || "—"}
                       </td>
                       <td
                         style={{
-                          padding: "5px 8px",
-                          border: "1px solid #ddd",
+                          padding: "1px 3px",
+                          border: "1px solid #666",
                           textAlign: "right",
+                          color: "#000",
                         }}
                       >
                         ${parseFloat(i.precio).toLocaleString("es-AR")}
@@ -1646,7 +1676,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
               borderTop: "1px solid #ccc",
               paddingTop: "10px",
               fontSize: "10px",
-              color: "#666",
+              color: "#000",
             }}
           >
             <p>{perfil?.leyenda_presupuesto || ""}</p>
