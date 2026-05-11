@@ -118,7 +118,7 @@ export default function Materiales({ soloLectura }) {
       .from("materiales")
       .select(`*, categorias ( nombre )`)
       .order("nombre");
-    
+
     // Filtrar por deleted_at según el toggle
     if (!mostrarEliminados) {
       query = query.is("deleted_at", null);
@@ -138,6 +138,7 @@ export default function Materiales({ soloLectura }) {
     const { data } = await supabase
       .from("categorias")
       .select("id, nombre")
+      .is("deleted_at", null)
       .order("nombre");
 
     setCategorias(data || []);
@@ -304,7 +305,7 @@ export default function Materiales({ soloLectura }) {
     setConfirmEliminar(null);
     cargar();
   }
-  
+
   async function restaurar(id) {
     // Restaurar: setear deleted_at a null
     const { error } = await supabase
@@ -406,7 +407,11 @@ export default function Materiales({ soloLectura }) {
 
   async function eliminarCategoria(id) {
     if (!confirm("¿Eliminar esta categoría?")) return;
-    const { error } = await supabase.from("categorias").delete().eq("id", id);
+    // Soft delete: actualizar deleted_at en lugar de borrar
+    const { error } = await supabase
+      .from("categorias")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
     if (error) return setErrorCategoria("Error al eliminar");
     setCategorias((prev) => prev.filter((c) => c.id !== id));
   }
@@ -444,9 +449,12 @@ export default function Materiales({ soloLectura }) {
                 + Nuevo
               </button>
             )}
-            {!soloLectura && selId && !modoEdicion && !esNuevo && (
+            {!soloLectura &&
+              selId &&
+              !modoEdicion &&
+              !esNuevo &&
               (() => {
-                const material = materiales.find(m => m.id === selId);
+                const material = materiales.find((m) => m.id === selId);
                 const isEliminado = material?.deleted_at;
                 return !isEliminado ? (
                   <button
@@ -456,11 +464,13 @@ export default function Materiales({ soloLectura }) {
                     <IconoEditar /> Editar
                   </button>
                 ) : null;
-              })()
-            )}
-            {!soloLectura && selId && !esNuevo && !modoEdicion && (
+              })()}
+            {!soloLectura &&
+              selId &&
+              !esNuevo &&
+              !modoEdicion &&
               (() => {
-                const material = materiales.find(m => m.id === selId);
+                const material = materiales.find((m) => m.id === selId);
                 const isEliminado = material?.deleted_at;
                 return isEliminado ? (
                   <button
@@ -477,8 +487,7 @@ export default function Materiales({ soloLectura }) {
                     <IconoEliminar /> Eliminar
                   </button>
                 );
-              })()
-            )}
+              })()}
             {modoEdicion && (
               <>
                 <button className="btn btn-primary" onClick={guardar}>
@@ -572,14 +581,16 @@ export default function Materiales({ soloLectura }) {
             onChange={(e) => setBusqueda(e.target.value)}
             style={{ flex: 1 }}
           />
-          <label style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: "0.5rem", 
-            fontSize: "0.9rem", 
-            color: "#888",
-            whiteSpace: "nowrap"
-          }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontSize: "0.9rem",
+              color: "#888",
+              whiteSpace: "nowrap",
+            }}
+          >
             <input
               type="checkbox"
               checked={mostrarEliminados}
@@ -628,51 +639,190 @@ export default function Materiales({ soloLectura }) {
         ) : filtrados.length === 0 ? (
           <p style={{ color: "#888", padding: "1rem" }}>No hay materiales</p>
         ) : (
-          <table style={{ tableLayout: "fixed", width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={{ width: "45%", textAlign: "left" }}>Nombre</th>
-                <th style={{ width: "20%" }}>Categoría</th>
-                <th style={{ width: "10%" }}>Unidad</th>
-                <th style={{ width: "25%" }}>Precio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((m) => (
-                <tr
-                  key={m.id}
-                  className={`${selId === m.id ? "seleccionado" : ""} ${m.deleted_at ? "eliminado" : ""}`}
-                  onClick={() => seleccionar(m)}
-                  style={m.deleted_at ? { 
-                    color: "#999", 
-                    textDecoration: "line-through",
-                    opacity: 0.7 
-                  } : {}}
-                >
-                  <td style={{ textAlign: "left" }}>
-                    <span>
-                      {m.nombre}
-                    </span>
-                    {m.deleted_at && (
-                      <span style={{ 
-                        fontSize: "0.7rem", 
-                        color: "#ff6b6b", 
-                        fontWeight: "bold",
-                        marginLeft: "0.5rem"
-                      }}>
-                        ELIMINADO
+          <>
+            {/* Vista Desktop */}
+            <div className="desktop-view">
+              <table style={{ tableLayout: "fixed", width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "45%", textAlign: "left" }}>Nombre</th>
+                    <th style={{ width: "20%" }}>Categoría</th>
+                    <th style={{ width: "10%" }}>Unidad</th>
+                    <th style={{ width: "25%" }}>Precio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtrados.map((m) => (
+                    <tr
+                      key={m.id}
+                      className={`${selId === m.id ? "seleccionado" : ""} ${m.deleted_at ? "eliminado" : ""}`}
+                      onClick={() => seleccionar(m)}
+                      style={
+                        m.deleted_at
+                          ? {
+                              color: "#999",
+                              textDecoration: "line-through",
+                              opacity: 0.7,
+                            }
+                          : {}
+                      }
+                    >
+                      <td style={{ textAlign: "left" }}>
+                        <span>{m.nombre}</span>
+                        {m.deleted_at && (
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              color: "#ff6b6b",
+                              fontWeight: "bold",
+                              marginLeft: "0.5rem",
+                            }}
+                          >
+                            ELIMINADO
+                          </span>
+                        )}
+                      </td>
+                      <td>{m.categorias?.nombre || "—"}</td>
+                      <td
+                        style={{
+                          textAlign: "center",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {m.unidad}
+                      </td>
+                      <td
+                        style={{ textAlign: "right", fontFamily: "monospace" }}
+                      >
+                        ${parseFloat(m.precio_unitario).toLocaleString("es-AR")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vista Mobile */}
+            <div className="mobile-view">
+              <div className="mobile-materiales-list">
+                {filtrados.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`mobile-material-item ${selId === m.id ? "seleccionado" : ""} ${m.deleted_at ? "eliminado" : ""}`}
+                    onClick={() => seleccionar(m)}
+                    style={
+                      m.deleted_at
+                        ? {
+                            opacity: 0.6,
+                            textDecoration: "line-through",
+                          }
+                        : {}
+                    }
+                  >
+                    {/* Fila 1: Nombre + Unidad + Precio */}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "1rem",
+                          fontWeight: "600",
+                          color: "#f0f0f0",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          flex: 1,
+                          maxWidth: "calc(100% - 150px)",
+                          textAlign: "left",
+                          paddingLeft: 0,
+                          marginLeft: 0,
+                        }}
+                      >
+                        {m.nombre}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          color: "#888",
+                          margin: "0 1rem",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        por {m.unidad}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "1.1rem",
+                          fontWeight: "700",
+                          color: "#4ade80",
+                          fontFamily: "monospace",
+                          flexShrink: 0,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        ${parseFloat(m.precio_unitario).toLocaleString("es-AR")}
+                      </div>
+                    </div>
+
+                    {/* Fila 2: Categoría y Descripción en una sola celda */}
+                    <div
+                      style={{
+                        width: "100%",
+                        marginTop: "0.3rem",
+                        textAlign: "left",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: "500",
+                          color: "#3b82f6",
+                          marginRight: "0.5rem",
+                        }}
+                      >
+                        {m.categorias?.nombre || "Sin categoría"}:
                       </span>
+                      {m.descripcion && (
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#666",
+                            fontStyle: "italic",
+                            lineHeight: "1.4",
+                            wordWrap: "break-word",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {m.descripcion}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Estado eliminado */}
+                    {m.deleted_at && (
+                      <div
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "#ff6b6b",
+                          fontWeight: "bold",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        ELIMINADO
+                      </div>
                     )}
-                  </td>
-                  <td>{m.categorias?.nombre || "—"}</td>
-                  <td style={{ textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.unidad}</td>
-                  <td style={{ textAlign: "right", fontFamily: "monospace" }}>
-                    ${parseFloat(m.precio_unitario).toLocaleString("es-AR")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -688,7 +838,8 @@ export default function Materiales({ soloLectura }) {
                 margin: "0.5rem 0 1rem",
               }}
             >
-              El material será archivado y no aparecerá en los listados. Podrás restaurarlo más tarde si es necesario.
+              El material será archivado y no aparecerá en los listados. Podrás
+              restaurarlo más tarde si es necesario.
             </p>
             <div className="modal-footer">
               <button

@@ -19,10 +19,14 @@ export default function Login({ onShowRegistro }) {
     });
     if (error) {
       // Detectar si el error es por email no confirmado
-      if (error.message?.includes("Email not confirmed") || 
-          error.message?.includes("email_not_confirmed") ||
-          error.message?.includes("confirm your email")) {
-        setError("Debes confirmar tu email antes de iniciar sesión. Revisá tu bandeja de entrada y haz clic en el enlace de confirmación.");
+      if (
+        error.message?.includes("Email not confirmed") ||
+        error.message?.includes("email_not_confirmed") ||
+        error.message?.includes("confirm your email")
+      ) {
+        setError(
+          "Debes confirmar tu email antes de iniciar sesión. Revisá tu bandeja de entrada y haz clic en el enlace de confirmación.",
+        );
       } else {
         setError("Email o contraseña incorrectos");
       }
@@ -164,6 +168,16 @@ export default function Login({ onShowRegistro }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            borderRadius: "8px",
+            border: "1px solid #333",
+            background: "#222",
+            color: "#f0f0f0",
+            fontSize: "0.95rem",
+            marginBottom: "0.75rem",
+          }}
         />
         <input
           type="password"
@@ -171,6 +185,16 @@ export default function Login({ onShowRegistro }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            borderRadius: "8px",
+            border: "1px solid #333",
+            background: "#222",
+            color: "#f0f0f0",
+            fontSize: "0.95rem",
+            marginBottom: "1rem",
+          }}
         />
 
         <button
@@ -205,9 +229,9 @@ export default function Login({ onShowRegistro }) {
           onClick={handleForgotPassword}
           style={{
             width: "100%",
-            padding: "0.65rem",
-            fontSize: "0.92rem",
-            marginTop: "0.5rem",
+            padding: "0.75rem",
+            fontSize: "1rem",
+            marginTop: "0.6rem",
           }}
         >
           Olvidé mi contraseña

@@ -39,7 +39,9 @@ export default function Registro({ onBackToLogin }) {
     if (error) {
       setError(error.message || "No se pudo crear la cuenta");
     } else {
-      setOk("¡Cuenta creada! Revisá tu email para confirmar el registro antes de iniciar sesión.");
+      setOk(
+        "¡Cuenta creada! Revisá tu email para confirmar el registro antes de iniciar sesión.",
+      );
       // No redirigir automáticamente, dejar que el usuario decida
     }
     setCargando(false);
@@ -73,12 +75,12 @@ export default function Registro({ onBackToLogin }) {
       >
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <img
-            src="/logo.png"
-            alt="Logo"
+            src="/logo-app.png"
+            alt="PresuPro"
             style={{
-              height: "80px",
+              height: "122px",
               objectFit: "contain",
-              marginBottom: "1rem",
+              marginBottom: "0.75rem",
             }}
           />
           <h2 style={{ margin: 0 }}>Crear cuenta nueva</h2>
@@ -96,6 +98,16 @@ export default function Registro({ onBackToLogin }) {
           value={nombreNegocio}
           onChange={(e) => setNombreNegocio(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleRegistro()}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            borderRadius: "8px",
+            border: "1px solid #333",
+            background: "#222",
+            color: "#f0f0f0",
+            fontSize: "0.95rem",
+            marginBottom: "0.75rem",
+          }}
         />
         <input
           type="email"
@@ -103,6 +115,16 @@ export default function Registro({ onBackToLogin }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleRegistro()}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            borderRadius: "8px",
+            border: "1px solid #333",
+            background: "#222",
+            color: "#f0f0f0",
+            fontSize: "0.95rem",
+            marginBottom: "0.75rem",
+          }}
         />
         <input
           type="password"
@@ -110,6 +132,16 @@ export default function Registro({ onBackToLogin }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleRegistro()}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            borderRadius: "8px",
+            border: "1px solid #333",
+            background: "#222",
+            color: "#f0f0f0",
+            fontSize: "0.95rem",
+            marginBottom: "0.75rem",
+          }}
         />
         <input
           type="password"
@@ -117,6 +149,16 @@ export default function Registro({ onBackToLogin }) {
           value={confirmar}
           onChange={(e) => setConfirmar(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleRegistro()}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            borderRadius: "8px",
+            border: "1px solid #333",
+            background: "#222",
+            color: "#f0f0f0",
+            fontSize: "0.95rem",
+            marginBottom: "1rem",
+          }}
         />
 
         <button

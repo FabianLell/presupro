@@ -20,6 +20,7 @@ export default function Categorias() {
     const { data, error } = await supabase
       .from("categorias")
       .select("*")
+      .is("deleted_at", null)
       .order("nombre");
     if (error) setError("Error al cargar categorías");
     else setCategorias(data);
@@ -69,7 +70,11 @@ export default function Categorias() {
 
   async function eliminar(id) {
     if (!confirm("¿Eliminar esta categoría?")) return;
-    const { error } = await supabase.from("categorias").delete().eq("id", id);
+    // Soft delete: actualizar deleted_at en lugar de borrar
+    const { error } = await supabase
+      .from("categorias")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
     if (error) return setError("Error al eliminar");
     cargar();
   }

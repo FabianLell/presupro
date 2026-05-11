@@ -85,97 +85,20 @@ export default function Perfil({ onPerfilActualizado }) {
     setOkRubros("");
 
     const userId = await getUserId();
-    const nuevosRubros = rubrosSeleccionados.filter(
-      (id) => !(form.rubros_seleccionados || []).includes(id),
-    );
 
-    if (nuevosRubros.length > 0) {
-      const { data: rubroCats } = await supabase
-        .from("rubro_categorias")
-        .select("*")
-        .in("rubro_id", nuevosRubros);
-
-      const { data: rubroMats } = await supabase
-        .from("rubro_materiales")
-        .select("*")
-        .in("rubro_id", nuevosRubros);
-
-      const { data: catsExistentes } = await supabase
-        .from("categorias")
-        .select("id, nombre")
-        .eq("user_id", userId);
-
-      const nombresExistentes = new Set(
-        (catsExistentes || []).map((c) => c.nombre.toLowerCase()),
-      );
-
-      const catsAInsertar = (rubroCats || []).filter(
-        (c) => !nombresExistentes.has(c.nombre.toLowerCase()),
-      );
-
-      let catsInsertadas = [];
-      if (catsAInsertar.length > 0) {
-        const { data: nuevasCats } = await supabase
-          .from("categorias")
-          .insert(
-            catsAInsertar.map((c) => ({ user_id: userId, nombre: c.nombre })),
-          )
-          .select();
-        catsInsertadas = nuevasCats || [];
-      }
-
-      const todasLasCats = [...(catsExistentes || []), ...catsInsertadas];
-      const mapaCats = {};
-      todasLasCats.forEach((c) => {
-        mapaCats[c.nombre.toLowerCase()] = c.id;
-      });
-
-      const mapaRubroCats = {};
-      (rubroCats || []).forEach((rc) => {
-        mapaRubroCats[rc.id] = rc.nombre;
-      });
-
-      const { data: matsExistentes } = await supabase
-        .from("materiales")
-        .select("nombre")
-        .eq("user_id", userId);
-
-      const matsNombresExistentes = new Set(
-        (matsExistentes || []).map((m) => m.nombre.toLowerCase()),
-      );
-
-      const matsAInsertar = (rubroMats || []).filter(
-        (m) => !matsNombresExistentes.has(m.nombre.toLowerCase()),
-      );
-
-      if (matsAInsertar.length > 0) {
-        await supabase.from("materiales").insert(
-          matsAInsertar.map((m) => {
-            const nombreCat = m.rubro_categoria_id
-              ? mapaRubroCats[m.rubro_categoria_id]
-              : null;
-            const categoriaId = nombreCat
-              ? mapaCats[nombreCat.toLowerCase()]
-              : null;
-            return {
-              user_id: userId,
-              nombre: m.nombre,
-              descripcion: m.descripcion || null,
-              unidad: m.unidad,
-              precio_unitario: m.precio_unitario,
-              categoria_id: categoriaId || null,
-            };
-          }),
-        );
-      }
-    }
-
-    await supabase
+    // Actualizar perfil con los rubros seleccionados - el trigger se encarga del sync
+    const { error } = await supabase
       .from("perfil")
       .upsert(
         { user_id: userId, rubros_seleccionados: rubrosSeleccionados },
         { onConflict: "user_id" },
       );
+
+    if (error) {
+      setError("Error al actualizar rubros");
+      setProcesandoRubros(false);
+      return;
+    }
 
     setForm((prev) => ({ ...prev, rubros_seleccionados: rubrosSeleccionados }));
     setOkRubros("Rubros actualizados correctamente");
