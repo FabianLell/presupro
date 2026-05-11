@@ -799,16 +799,6 @@ export default function Presupuestos({ perfil, soloLectura }) {
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <h1
-                style={{
-                  fontSize: "2rem",
-                  color: "#000",
-                  margin: 0,
-                  letterSpacing: "0.05em",
-                }}
-              >
-                PRESUPUESTO
-              </h1>
               <p
                 style={{
                   fontSize: "0.72rem",
