@@ -14,6 +14,7 @@ import Presupuestos from "./components/Presupuestos";
 import Admin from "./components/Admin";
 import Perfil from "./components/Perfil";
 import Onboarding from "./components/Onboarding";
+import Precarga from "./components/Precarga";
 
 // Hook para detectar mobile
 function useIsMobile() {
@@ -40,6 +41,7 @@ const SECCIONES = [
   { id: "clientes", label: "Clientes", icono: "👤" },
   { id: "materiales", label: "Materiales", icono: "🔩" },
   { id: "servicios", label: "Servicios", icono: "🔧" },
+  { id: "precarga", label: "Precarga", icono: "📚" },
 ];
 
 const TITULO_SECCION = {
@@ -47,6 +49,7 @@ const TITULO_SECCION = {
   clientes: "Clientes",
   materiales: "Materiales",
   servicios: "Servicios",
+  precarga: "Precarga",
   perfil: "Editar perfil",
   admin: "Panel Admin",
 };
@@ -580,6 +583,7 @@ export default function App() {
             {seccion === "clientes" && (
               <Clientes soloLectura={estadoCuenta.soloLectura} />
             )}
+            {seccion === "precarga" && <Precarga />}
             {seccion === "perfil" && (
               <Perfil onPerfilActualizado={cargarPerfil} />
             )}
@@ -635,6 +639,13 @@ export default function App() {
                 >
                   <span className="mobile-more-icon">👤</span>
                   <span>Editar perfil</span>
+                </button>
+                <button
+                  className="mobile-more-btn"
+                  onClick={() => navegarA("precarga")}
+                >
+                  <span className="mobile-more-icon">📚</span>
+                  <span>Precarga</span>
                 </button>
                 {isAdmin && (
                   <button
