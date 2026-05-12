@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase, getUserId } from "../supabase";
-import { useDirtyForm } from "../hooks/useDirtyForm";
 
 // Hook para detectar mobile
 function useIsMobile() {
@@ -410,7 +409,8 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
           >
             No hay categorías configuradas para este rubro
           </div>
-        ) : (
+        ) : isMobile ? (
+          // Vista mobile: diseño actual de lista vertical
           <div>
             {categorias.map((cat) => {
               const expandida = categoriasExpandidas[cat.id];
@@ -528,81 +528,16 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                               {material.nombre}
                             </div>
 
-                            {/* Detalles responsive */}
-                            {isMobile ? (
-                              <div
-                                style={{
-                                  color: "#94a3b8",
-                                  fontSize: "13px",
-                                  lineHeight: "1.4",
-                                }}
-                              >
-                                {material.descripcion}
-                              </div>
-                            ) : (
-                              <div
-                                style={{
-                                  display: "grid",
-                                  gridTemplateColumns: "1fr 1fr 1fr",
-                                  gap: "12px",
-                                }}
-                              >
-                                <div>
-                                  <span
-                                    style={{
-                                      color: "#6b7280",
-                                      fontSize: "12px",
-                                    }}
-                                  >
-                                    Descripción:
-                                  </span>
-                                  <div
-                                    style={{
-                                      color: "#94a3b8",
-                                      fontSize: "13px",
-                                    }}
-                                  >
-                                    {material.descripcion}
-                                  </div>
-                                </div>
-                                <div>
-                                  <span
-                                    style={{
-                                      color: "#6b7280",
-                                      fontSize: "12px",
-                                    }}
-                                  >
-                                    Unidad:
-                                  </span>
-                                  <div
-                                    style={{
-                                      color: "#94a3b8",
-                                      fontSize: "13px",
-                                    }}
-                                  >
-                                    {material.unidad}
-                                  </div>
-                                </div>
-                                <div>
-                                  <span
-                                    style={{
-                                      color: "#6b7280",
-                                      fontSize: "12px",
-                                    }}
-                                  >
-                                    Precio:
-                                  </span>
-                                  <div
-                                    style={{
-                                      color: "#94a3b8",
-                                      fontSize: "13px",
-                                    }}
-                                  >
-                                    ${material.precio || "N/A"}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                            {/* Detalles mobile: solo nombre con botón de expansión */}
+                            <div
+                              style={{
+                                color: "#94a3b8",
+                                fontSize: "13px",
+                                lineHeight: "1.4",
+                              }}
+                            >
+                              {material.descripcion}
+                            </div>
                           </div>
                         ))
                       )}
@@ -611,6 +546,284 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                 </div>
               );
             })}
+          </div>
+        ) : (
+          // Vista PC: 2 columnas (categorías a la izquierda, materiales a la derecha)
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 2fr",
+              gap: "20px",
+              height: "calc(100vh - 200px)",
+            }}
+          >
+            {/* Columna 1: Categorías */}
+            <div
+              style={{
+                backgroundColor: "#1e293b",
+                border: "1px solid #374151",
+                borderRadius: "8px",
+                padding: "16px",
+                overflowY: "auto",
+              }}
+            >
+              <h3
+                style={{
+                  color: "#ffffff",
+                  margin: "0 0 16px 0",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  borderBottom: "1px solid #374151",
+                  paddingBottom: "8px",
+                }}
+              >
+                Categorías
+              </h3>
+              {categorias.map((cat) => {
+                const materialesCat = materiales[cat.id] || [];
+                const seleccionada = categoriasExpandidas[cat.id];
+
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => {
+                      // Al hacer clic, expandir esta categoría y colapsar las demás
+                      const nuevasExpansiones = {};
+                      categorias.forEach((c) => {
+                        nuevasExpansiones[c.id] = c.id === cat.id;
+                      });
+                      setCategoriasExpandidas(nuevasExpansiones);
+                    }}
+                    style={{
+                      backgroundColor: seleccionada ? "#111827" : "transparent",
+                      border: seleccionada
+                        ? "1px solid #10b981"
+                        : "1px solid transparent",
+                      borderRadius: "6px",
+                      padding: "12px",
+                      marginBottom: "8px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!seleccionada) {
+                        e.currentTarget.style.backgroundColor = "#374151";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!seleccionada) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "16px",
+                        backgroundColor: "#10b981",
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {cat.icono}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          color: "#ffffff",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        {cat.nombre}
+                      </div>
+                      <div
+                        style={{
+                          color: "#6b7280",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {materialesCat.length} materiales
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Columna 2: Materiales de la categoría seleccionada */}
+            <div
+              style={{
+                backgroundColor: "#1e293b",
+                border: "1px solid #374151",
+                borderRadius: "8px",
+                padding: "16px",
+                overflowY: "auto",
+              }}
+            >
+              <h3
+                style={{
+                  color: "#ffffff",
+                  margin: "0 0 16px 0",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  borderBottom: "1px solid #374151",
+                  paddingBottom: "8px",
+                }}
+              >
+                Materiales
+              </h3>
+              {(() => {
+                const categoriaSeleccionada = categorias.find(
+                  (cat) => categoriasExpandidas[cat.id],
+                );
+                const materialesCat = categoriaSeleccionada
+                  ? materiales[categoriaSeleccionada.id] || []
+                  : [];
+
+                if (!categoriaSeleccionada) {
+                  return (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        color: "#6b7280",
+                        fontSize: "14px",
+                        padding: "2rem",
+                      }}
+                    >
+                      Selecciona una categoría para ver sus materiales
+                    </div>
+                  );
+                }
+
+                if (materialesCat.length === 0) {
+                  return (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        color: "#6b7280",
+                        fontSize: "14px",
+                        padding: "2rem",
+                      }}
+                    >
+                      No hay materiales configurados para esta categoría
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(300px, 1fr))",
+                      gap: "12px",
+                    }}
+                  >
+                    {materialesCat.map((material) => (
+                      <div
+                        key={material.id}
+                        style={{
+                          backgroundColor: "#111827",
+                          border: "1px solid #374151",
+                          borderRadius: "6px",
+                          padding: "16px",
+                          transition: "all 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#1f2937";
+                          e.currentTarget.style.borderColor = "#4b5563";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "#111827";
+                          e.currentTarget.style.borderColor = "#374151";
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: "#ffffff",
+                            fontSize: "15px",
+                            fontWeight: "600",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          {material.nombre}
+                        </div>
+
+                        <div
+                          style={{
+                            color: "#94a3b8",
+                            fontSize: "13px",
+                            marginBottom: "12px",
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          {material.descripcion}
+                        </div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "8px",
+                          }}
+                        >
+                          <div>
+                            <span
+                              style={{
+                                color: "#6b7280",
+                                fontSize: "11px",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
+                              }}
+                            >
+                              Unidad
+                            </span>
+                            <div
+                              style={{
+                                color: "#ffffff",
+                                fontSize: "14px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              {material.unidad}
+                            </div>
+                          </div>
+                          <div>
+                            <span
+                              style={{
+                                color: "#6b7280",
+                                fontSize: "11px",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
+                              }}
+                            >
+                              Precio Unitario
+                            </span>
+                            <div
+                              style={{
+                                color: "#10b981",
+                                fontSize: "14px",
+                                fontWeight: "600",
+                              }}
+                            >
+                              ${material.precio || "N/A"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
       </div>
@@ -621,16 +834,19 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
 export default function Precarga() {
   const [rubros, setRubros] = useState([]);
   const [rubrosSeleccionados, setRubrosSeleccionados] = useState([]);
+  const [rubrosSeleccionadosIniciales, setRubrosSeleccionadosIniciales] =
+    useState([]);
   const [rubroSeleccionado, setRubroSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [accionPendiente, setAccionPendiente] = useState(null);
+  const [sincronizando, setSincronizando] = useState(false);
   const gridConfig = useGridConfig();
-
-  const { isDirty, markAsClean } = useDirtyForm();
 
   useEffect(() => {
     cargarDatos();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   async function cargarDatos() {
     setCargando(true);
@@ -655,7 +871,7 @@ export default function Precarga() {
       // Establecer rubros seleccionados actuales
       const seleccionados = perfilData?.rubros_seleccionados || [];
       setRubrosSeleccionados(seleccionados);
-      markAsClean();
+      setRubrosSeleccionadosIniciales([...seleccionados]);
     } catch (error) {
       console.error("Error al cargar datos:", error);
     } finally {
@@ -671,6 +887,34 @@ export default function Precarga() {
     setRubrosSeleccionados(nuevosSeleccionados);
   }
 
+  // Función para comparar arrays de UUIDs sin importar orden
+  function arraysIguales(arr1, arr2) {
+    if (arr1.length !== arr2.length) return false;
+    const set1 = new Set(arr1);
+    const set2 = new Set(arr2);
+    if (set1.size !== set2.size) return false;
+    for (const item of set1) {
+      if (!set2.has(item)) return false;
+    }
+    return true;
+  }
+
+  // Verificar si hay cambios pendientes
+  const hayCambiosPendientes = !arraysIguales(
+    rubrosSeleccionados,
+    rubrosSeleccionadosIniciales,
+  );
+
+  // Función para manejar navegación con protección
+  function manejarNavegacion(accion) {
+    if (hayCambiosPendientes) {
+      setAccionPendiente(() => accion);
+      setMostrarConfirmacion(true);
+    } else {
+      accion();
+    }
+  }
+
   async function guardarCambios() {
     setGuardando(true);
     try {
@@ -684,7 +928,13 @@ export default function Precarga() {
 
       if (error) throw error;
 
-      markAsClean();
+      // Actualizar estado inicial
+      setRubrosSeleccionadosIniciales([...rubrosSeleccionados]);
+
+      // Mostrar feedback de sincronización
+      setSincronizando(true);
+      setTimeout(() => setSincronizando(false), 2000);
+
       // Recargar datos para sincronizar
       await cargarDatos();
     } catch (error) {
@@ -695,8 +945,23 @@ export default function Precarga() {
     }
   }
 
+  function confirmarSalidaSinGuardar() {
+    setMostrarConfirmacion(false);
+    if (accionPendiente) {
+      accionPendiente();
+      setAccionPendiente(null);
+    }
+    // Restaurar estado inicial
+    setRubrosSeleccionados([...rubrosSeleccionadosIniciales]);
+  }
+
+  function cancelarSalida() {
+    setMostrarConfirmacion(false);
+    setAccionPendiente(null);
+  }
+
   function seleccionarRubro(rubro) {
-    setRubroSeleccionado(rubro);
+    manejarNavegacion(() => setRubroSeleccionado(rubro));
   }
 
   function volverAlListado() {
@@ -761,38 +1026,51 @@ export default function Precarga() {
             </div>
           </div>
 
-          {isDirty && (
-            <button
-              onClick={guardarCambios}
-              disabled={guardando}
-              style={{
-                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "6px",
-                padding: "6px 16px",
-                fontSize: "13px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                boxShadow: "0 1px 3px rgba(245, 158, 11, 0.2)",
-              }}
-              onMouseEnter={(e) => {
+          {/* Botón de guardar siempre visible */}
+          <button
+            onClick={guardarCambios}
+            disabled={guardando || !hayCambiosPendientes}
+            style={{
+              background: hayCambiosPendientes
+                ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                : "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "6px",
+              padding: "6px 16px",
+              fontSize: "13px",
+              fontWeight: "600",
+              cursor:
+                guardando || !hayCambiosPendientes ? "not-allowed" : "pointer",
+              transition: "all 0.2s ease",
+              boxShadow: hayCambiosPendientes
+                ? "0 1px 3px rgba(245, 158, 11, 0.2)"
+                : "0 1px 3px rgba(0, 0, 0, 0.1)",
+              opacity: guardando ? 0.7 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!guardando && hayCambiosPendientes) {
                 e.target.style.background =
                   "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)";
                 e.target.style.transform = "translateY(-1px)";
                 e.target.style.boxShadow = "0 2px 4px rgba(245, 158, 11, 0.3)";
-              }}
-              onMouseLeave={(e) => {
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!guardando && hayCambiosPendientes) {
                 e.target.style.background =
                   "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
                 e.target.style.transform = "translateY(0)";
                 e.target.style.boxShadow = "0 1px 3px rgba(245, 158, 11, 0.2)";
-              }}
-            >
-              {guardando ? "Guardando..." : "Guardar Cambios"}
-            </button>
-          )}
+              }
+            }}
+          >
+            {guardando
+              ? "Guardando..."
+              : sincronizando
+                ? "Sincronizando..."
+                : "Guardar Cambios"}
+          </button>
         </div>
       </div>
 
@@ -885,6 +1163,106 @@ export default function Precarga() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Modal de confirmación para salir sin guardar */}
+        {mostrarConfirmacion && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: "#1e293b",
+                border: "1px solid #374151",
+                borderRadius: "12px",
+                padding: "24px",
+                maxWidth: "400px",
+                width: "90%",
+              }}
+            >
+              <h3
+                style={{
+                  color: "#ffffff",
+                  margin: "0 0 12px 0",
+                  fontSize: "18px",
+                  fontWeight: "600",
+                }}
+              >
+                ¿Deseas salir sin guardar?
+              </h3>
+              <p
+                style={{
+                  color: "#94a3b8",
+                  margin: "0 0 24px 0",
+                  fontSize: "14px",
+                  lineHeight: "1.5",
+                }}
+              >
+                Tienes cambios pendientes que se perderán si continúas.
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  onClick={cancelarSalida}
+                  style={{
+                    backgroundColor: "#374151",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#4b5563";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#374151";
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarSalidaSinGuardar}
+                  style={{
+                    backgroundColor: "#dc2626",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = "#b91c1c";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = "#dc2626";
+                  }}
+                >
+                  Salir sin guardar
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
