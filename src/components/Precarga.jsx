@@ -20,7 +20,7 @@ function useIsMobile() {
 // Hook para detectar el tamaño de pantalla y configurar el grid con máxima densidad
 function useGridConfig() {
   const [gridConfig, setGridConfig] = useState({
-    columns: 3, // Reducido a 3 columnas
+    columns: 3,
     isTablet: false,
     isMobile: false,
   });
@@ -29,19 +29,17 @@ function useGridConfig() {
     function updateGridConfig() {
       const width = window.innerWidth;
       if (width <= 640) {
-        // Móvil pequeño - 1 columna
         setGridConfig({ columns: 1, isTablet: false, isMobile: true });
       } else if (width <= 768) {
-        // Móvil grande - 1 columna para evitar corte
         setGridConfig({ columns: 1, isTablet: false, isMobile: true });
       } else if (width <= 1024) {
-        setGridConfig({ columns: 2, isTablet: true, isMobile: false }); // Reducido de 3 a 2
+        setGridConfig({ columns: 2, isTablet: true, isMobile: false });
       } else if (width <= 1280) {
-        setGridConfig({ columns: 2, isTablet: false, isMobile: false }); // Reducido de 3 a 2
+        setGridConfig({ columns: 2, isTablet: false, isMobile: false });
       } else if (width <= 1600) {
-        setGridConfig({ columns: 2, isTablet: false, isMobile: false }); // Reducido de 3 a 2
+        setGridConfig({ columns: 2, isTablet: false, isMobile: false });
       } else {
-        setGridConfig({ columns: 3, isTablet: false, isMobile: false }); // Reducido de 4 a 3
+        setGridConfig({ columns: 3, isTablet: false, isMobile: false });
       }
     }
 
@@ -225,61 +223,79 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
   const [cargando, setCargando] = useState(false);
   const isMobile = useIsMobile();
 
-  async function cargarDatosRubro() {
-    setCargando(true);
-    try {
-      // Cargar categorías del rubro
-      const { data: cats } = await supabase
-        .from("rubro_categorias")
-        .select(
-          `
-          categoria_id,
-          categorias!inner(id, nombre, icono)
-        `,
-        )
-        .eq("rubro_id", rubro.id);
-
-      // Cargar materiales del rubro
-      const { data: mats } = await supabase
-        .from("rubro_materiales")
-        .select(
-          `
-          material_id,
-          materiales!inner(id, nombre, descripcion, unidad, precio)
-        `,
-        )
-        .eq("rubro_id", rubro.id);
-
-      // Organizar datos por categorías
-      const materialesPorCategoria = {};
-      mats?.forEach((mat) => {
-        const catId = mat.categoria_id;
-        if (!materialesPorCategoria[catId]) {
-          materialesPorCategoria[catId] = [];
-        }
-        materialesPorCategoria[catId].push({
-          id: mat.material_id,
-          nombre: mat.materiales.nombre,
-          descripcion: mat.materiales.descripcion,
-          unidad: mat.materiales.unidad,
-          precio: mat.materiales.precio,
-        });
-      });
-
-      setCategorias(cats || []);
-      setMateriales(materialesPorCategoria);
-    } catch (error) {
-      console.error("Error al cargar datos del rubro:", error);
-    } finally {
-      setCargando(false);
-    }
-  }
-
   useEffect(() => {
+    let isMounted = true;
+
+    async function cargarDatosRubro() {
+      if (!isMounted) return;
+
+      try {
+        // Cargar categorías del rubro
+        const { data: cats } = await supabase
+          .from("rubro_categorias")
+          .select(
+            `
+            id,
+            nombre,
+            icono
+          `,
+          )
+          .eq("rubro_id", rubro.id);
+
+        // Cargar materiales del rubro
+        const { data: mats } = await supabase
+          .from("rubro_materiales")
+          .select(
+            `
+            id,
+            nombre,
+            descripcion,
+            unidad,
+            precio_unitario,
+            rubro_categoria_id
+          `,
+          )
+          .eq("rubro_id", rubro.id);
+
+        if (!isMounted) return;
+
+        // Organizar datos por categorías
+        const materialesPorCategoria = {};
+        mats?.forEach((mat) => {
+          const catId = mat.rubro_categoria_id;
+          if (!materialesPorCategoria[catId]) {
+            materialesPorCategoria[catId] = [];
+          }
+          materialesPorCategoria[catId].push({
+            id: mat.id,
+            nombre: mat.nombre,
+            descripcion: mat.descripcion,
+            unidad: mat.unidad,
+            precio: mat.precio_unitario,
+          });
+        });
+
+        setCategorias(cats || []);
+        setMateriales(materialesPorCategoria);
+      } catch (error) {
+        if (isMounted) {
+          console.error("Error al cargar datos del rubro:", error);
+        }
+      } finally {
+        if (isMounted) {
+          setCargando(false);
+        }
+      }
+    }
+
     if (rubro) {
       cargarDatosRubro();
     }
-  }, [rubro]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return () => {
+      isMounted = false;
+    };
+  }, [rubro]);
 
   function toggleCategoria(catId) {
     setCategoriasExpandidas((prev) => ({
@@ -397,14 +413,14 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
         ) : (
           <div>
             {categorias.map((cat) => {
-              const expandida = categoriasExpandidas[cat.categoria_id];
-              const materialesCat = materiales[cat.categoria_id] || [];
+              const expandida = categoriasExpandidas[cat.id];
+              const materialesCat = materiales[cat.id] || [];
 
               return (
-                <div key={cat.categoria_id} style={{ marginBottom: "16px" }}>
+                <div key={cat.id} style={{ marginBottom: "16px" }}>
                   {/* Categoría */}
                   <div
-                    onClick={() => toggleCategoria(cat.categoria_id)}
+                    onClick={() => toggleCategoria(cat.id)}
                     style={{
                       backgroundColor: "#1e293b",
                       border: "1px solid #374151",
@@ -442,7 +458,7 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                           justifyContent: "center",
                         }}
                       >
-                        {cat.categorias.icono}
+                        {cat.icono}
                       </div>
                       <span
                         style={{
@@ -451,7 +467,7 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                           fontWeight: "500",
                         }}
                       >
-                        {cat.categorias.nombre}
+                        {cat.nombre}
                       </span>
                     </div>
 
@@ -786,8 +802,7 @@ export default function Precarga() {
           padding: "16px 24px 32px 24px",
           maxWidth: "1400px",
           margin: "0 auto",
-          // Eliminadas todas las restricciones de altura
-          overflowY: "visible", // Cambiado a visible para que no corte
+          overflowY: "visible",
           overflowX: "hidden",
         }}
       >
@@ -850,7 +865,7 @@ export default function Precarga() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: `repeat(${gridConfig.columns}, minmax(200px, 1fr))`, // Ancho mínimo de 200px
+                  gridTemplateColumns: `repeat(${gridConfig.columns}, minmax(200px, 1fr))`,
                   gap: "8px",
                   alignItems: "stretch",
                   paddingBottom: "40px",
