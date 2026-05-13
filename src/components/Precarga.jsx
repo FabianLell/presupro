@@ -848,6 +848,40 @@ export default function Precarga() {
     cargarDatos();
   }, []);
 
+  // Función para comparar arrays de UUIDs sin importar orden
+  function arraysIguales(arr1, arr2) {
+    if (arr1.length !== arr2.length) return false;
+    const set1 = new Set(arr1);
+    const set2 = new Set(arr2);
+    if (set1.size !== set2.size) return false;
+    for (const item of set1) {
+      if (!set2.has(item)) return false;
+    }
+    return true;
+  }
+
+  // Verificar si hay cambios pendientes
+  const hayCambiosPendientes = !arraysIguales(
+    rubrosSeleccionados,
+    rubrosSeleccionadosIniciales,
+  );
+
+  // Protección de navegación al salir de la sección Precarga
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hayCambiosPendientes) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hayCambiosPendientes]);
+
   async function cargarDatos() {
     setCargando(true);
     try {
@@ -885,34 +919,6 @@ export default function Precarga() {
       : [...rubrosSeleccionados, rubroId];
 
     setRubrosSeleccionados(nuevosSeleccionados);
-  }
-
-  // Función para comparar arrays de UUIDs sin importar orden
-  function arraysIguales(arr1, arr2) {
-    if (arr1.length !== arr2.length) return false;
-    const set1 = new Set(arr1);
-    const set2 = new Set(arr2);
-    if (set1.size !== set2.size) return false;
-    for (const item of set1) {
-      if (!set2.has(item)) return false;
-    }
-    return true;
-  }
-
-  // Verificar si hay cambios pendientes
-  const hayCambiosPendientes = !arraysIguales(
-    rubrosSeleccionados,
-    rubrosSeleccionadosIniciales,
-  );
-
-  // Función para manejar navegación con protección
-  function manejarNavegacion(accion) {
-    if (hayCambiosPendientes) {
-      setAccionPendiente(() => accion);
-      setMostrarConfirmacion(true);
-    } else {
-      accion();
-    }
   }
 
   async function guardarCambios() {
@@ -961,7 +967,8 @@ export default function Precarga() {
   }
 
   function seleccionarRubro(rubro) {
-    manejarNavegacion(() => setRubroSeleccionado(rubro));
+    // No preguntar al entrar a la vista detallada, es solo visualización de la Fuente Maestra
+    setRubroSeleccionado(rubro);
   }
 
   function volverAlListado() {
