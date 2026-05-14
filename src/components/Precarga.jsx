@@ -219,6 +219,9 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
   const [categorias, setCategorias] = useState([]);
   const [materiales, setMateriales] = useState({});
   const [categoriasExpandidas, setCategoriasExpandidas] = useState({});
+  const [categoriasActivadas, setCategoriasActivadas] = useState({});
+  const [materialesActivados, setMaterialesActivados] = useState({});
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
   const [cargando, setCargando] = useState(false);
   const isMobile = useIsMobile();
 
@@ -296,11 +299,51 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
     };
   }, [rubro]);
 
-  function toggleCategoria(catId) {
-    setCategoriasExpandidas((prev) => ({
+  function toggleTodasCategorias(activar) {
+    const nuevasActivaciones = {};
+    const nuevasActivacionesMateriales = {};
+
+    categorias.forEach((cat) => {
+      nuevasActivaciones[cat.id] = activar;
+      // Activar/desactivar todos los materiales de esta categoría
+      const materialesCat = materiales[cat.id] || [];
+      materialesCat.forEach((mat) => {
+        nuevasActivacionesMateriales[mat.id] = activar;
+      });
+    });
+
+    setCategoriasActivadas(nuevasActivaciones);
+    setMaterialesActivados(nuevasActivacionesMateriales);
+  }
+
+  function toggleCategoriaConMateriales(catId) {
+    const activar = !categoriasActivadas[catId];
+    const nuevasActivaciones = { ...categoriasActivadas, [catId]: activar };
+    const nuevasActivacionesMateriales = { ...materialesActivados };
+
+    // Activar/desactivar todos los materiales de esta categoría
+    const materialesCat = materiales[catId] || [];
+    materialesCat.forEach((mat) => {
+      nuevasActivacionesMateriales[mat.id] = activar;
+    });
+
+    setCategoriasActivadas(nuevasActivaciones);
+    setMaterialesActivados(nuevasActivacionesMateriales);
+  }
+
+  function toggleMaterial(matId) {
+    setMaterialesActivados((prev) => ({
       ...prev,
-      [catId]: !prev[catId],
+      [matId]: !prev[matId],
     }));
+  }
+
+  function seleccionarCategoriaParaConfigurar(cat) {
+    setCategoriaSeleccionada(cat);
+  }
+
+  function volverACategorias() {
+    setCategoriaSeleccionada(null);
   }
 
   if (cargando) {
@@ -373,27 +416,56 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
           </div>
         </div>
 
-        <button
-          onClick={onVolver}
-          style={{
-            backgroundColor: "#374151",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "6px",
-            padding: "8px 16px",
-            fontSize: "14px",
-            cursor: "pointer",
-            transition: "all 0.2s",
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.backgroundColor = "#4b5563";
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.backgroundColor = "#374151";
-          }}
-        >
-          ← Volver al Listado
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {/* Switch maestro "todas" */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              backgroundColor: "#1f2937",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid #374151",
+            }}
+          >
+            <span
+              style={{
+                color: "#94a3b8",
+                fontSize: "13px",
+                fontWeight: "500",
+              }}
+            >
+              Todas
+            </span>
+            <ModernToggle
+              checked={categorias.every((cat) => categoriasActivadas[cat.id])}
+              onChange={(checked) => toggleTodasCategorias(checked)}
+            />
+          </div>
+
+          <button
+            onClick={onVolver}
+            style={{
+              backgroundColor: "#374151",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "6px",
+              padding: "8px 16px",
+              fontSize: "14px",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#4b5563";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = "#374151";
+            }}
+          >
+            ← Volver al Listado
+          </button>
+        </div>
       </div>
 
       {/* Contenido del tree-view */}
@@ -415,28 +487,21 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             {categorias.map((cat) => {
               const expandida = categoriasExpandidas[cat.id];
               const materialesCat = materiales[cat.id] || [];
+              const activada = categoriasActivadas[cat.id];
 
               return (
                 <div key={cat.id} style={{ marginBottom: "16px" }}>
                   {/* Categoría */}
                   <div
-                    onClick={() => toggleCategoria(cat.id)}
                     style={{
                       backgroundColor: "#1e293b",
-                      border: "1px solid #374151",
+                      border: `1px solid ${activada ? "#059669" : "#374151"}`,
                       borderRadius: "8px",
                       padding: "12px 16px",
-                      cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#374151";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "#1e293b";
                     }}
                   >
                     <div
@@ -444,12 +509,15 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                         display: "flex",
                         alignItems: "center",
                         gap: "12px",
+                        flex: 1,
                       }}
                     >
                       <div
                         style={{
                           fontSize: "18px",
-                          backgroundColor: "#10b981",
+                          backgroundColor: activada
+                            ? "rgba(5, 150, 105, 0.2)"
+                            : "#10b981",
                           width: "32px",
                           height: "32px",
                           borderRadius: "6px",
@@ -473,13 +541,79 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
 
                     <div
                       style={{
-                        color: "#6b7280",
-                        fontSize: "20px",
-                        transform: expandida ? "rotate(90deg)" : "rotate(0deg)",
-                        transition: "transform 0.2s",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
                       }}
                     >
-                      ▶
+                      {/* Switch de categoría */}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <ModernToggle
+                          checked={activada}
+                          onChange={() => toggleCategoriaConMateriales(cat.id)}
+                        />
+                      </div>
+
+                      {/* Botón de configuración (solo mobile) */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          seleccionarCategoriaParaConfigurar(cat);
+                        }}
+                        style={{
+                          fontSize: "18px",
+                          color: "#6b7280",
+                          cursor: "pointer",
+                          padding: "6px",
+                          borderRadius: "4px",
+                          border: "1px solid transparent",
+                          transition: "all 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = "#00CED1";
+                          e.currentTarget.style.borderColor = "#00CED1";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = "#6b7280";
+                          e.currentTarget.style.borderColor = "transparent";
+                        }}
+                        title="Configurar materiales"
+                      >
+                        <svg
+                          width="20"
+                          height="16"
+                          viewBox="0 0 16 12"
+                          fill="currentColor"
+                        >
+                          <line
+                            x1="0"
+                            y1="2"
+                            x2="14"
+                            y2="2"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          />
+                          <circle cx="2" cy="2" r="1.5" fill="#00CED1" />
+                          <line
+                            x1="0"
+                            y1="6"
+                            x2="14"
+                            y2="6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          />
+                          <circle cx="12" cy="6" r="1.5" fill="#00CED1" />
+                          <line
+                            x1="0"
+                            y1="10"
+                            x2="14"
+                            y2="10"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          />
+                          <circle cx="3" cy="10" r="1.5" fill="#00CED1" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
 
@@ -546,6 +680,161 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                 </div>
               );
             })}
+
+            {/* Vista de selección de materiales por categoría (solo mobile) */}
+            {categoriaSeleccionada && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: "#0f172a",
+                  zIndex: 1000,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {/* Header de vista de materiales */}
+                <div
+                  style={{
+                    backgroundColor: "#1e293b",
+                    padding: "16px 20px",
+                    borderBottom: "1px solid #334155",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  }}
+                >
+                  <button
+                    onClick={volverACategorias}
+                    style={{
+                      backgroundColor: "#374151",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "8px 12px",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = "#4b5563";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = "#374151";
+                    }}
+                  >
+                    ←
+                  </button>
+                  <div
+                    style={{
+                      fontSize: "20px",
+                      backgroundColor: "#10b981",
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {categoriaSeleccionada.icono}
+                  </div>
+                  <div>
+                    <h3
+                      style={{
+                        color: "#ffffff",
+                        margin: 0,
+                        fontSize: "16px",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {categoriaSeleccionada.nombre}
+                    </h3>
+                    <p
+                      style={{
+                        color: "#94a3b8",
+                        margin: "2px 0 0",
+                        fontSize: "12px",
+                      }}
+                    >
+                      Selecciona los materiales
+                    </p>
+                  </div>
+                </div>
+
+                {/* Lista de materiales */}
+                <div style={{ padding: "16px", flex: 1, overflowY: "auto" }}>
+                  {(() => {
+                    const materialesCat =
+                      materiales[categoriaSeleccionada.id] || [];
+                    if (materialesCat.length === 0) {
+                      return (
+                        <div
+                          style={{
+                            textAlign: "center",
+                            color: "#6b7280",
+                            fontSize: "14px",
+                            padding: "2rem",
+                          }}
+                        >
+                          No hay materiales configurados para esta categoría
+                        </div>
+                      );
+                    }
+
+                    return materialesCat.map((material) => {
+                      const activado = materialesActivados[material.id];
+                      return (
+                        <div
+                          key={material.id}
+                          style={{
+                            backgroundColor: "#1e293b",
+                            border: `1px solid ${activado ? "#059669" : "#374151"}`,
+                            borderRadius: "8px",
+                            padding: "12px 16px",
+                            marginBottom: "12px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div
+                              style={{
+                                color: "#ffffff",
+                                fontSize: "15px",
+                                fontWeight: "500",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              {material.nombre}
+                            </div>
+                            <div
+                              style={{
+                                color: "#94a3b8",
+                                fontSize: "13px",
+                              }}
+                            >
+                              {material.descripcion}
+                            </div>
+                          </div>
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <ModernToggle
+                              checked={activado}
+                              onChange={() => toggleMaterial(material.id)}
+                            />
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           // Vista PC: 2 columnas (categorías a la izquierda, materiales a la derecha)
@@ -582,23 +871,18 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
               {categorias.map((cat) => {
                 const materialesCat = materiales[cat.id] || [];
                 const seleccionada = categoriasExpandidas[cat.id];
+                const activada = categoriasActivadas[cat.id];
 
                 return (
                   <div
                     key={cat.id}
-                    onClick={() => {
-                      // Al hacer clic, expandir esta categoría y colapsar las demás
-                      const nuevasExpansiones = {};
-                      categorias.forEach((c) => {
-                        nuevasExpansiones[c.id] = c.id === cat.id;
-                      });
-                      setCategoriasExpandidas(nuevasExpansiones);
-                    }}
                     style={{
                       backgroundColor: seleccionada ? "#111827" : "transparent",
                       border: seleccionada
                         ? "1px solid #10b981"
-                        : "1px solid transparent",
+                        : activada
+                          ? "1px solid #059669"
+                          : "1px solid transparent",
                       borderRadius: "6px",
                       padding: "12px",
                       marginBottom: "8px",
@@ -622,7 +906,9 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                     <div
                       style={{
                         fontSize: "16px",
-                        backgroundColor: "#10b981",
+                        backgroundColor: activada
+                          ? "rgba(5, 150, 105, 0.2)"
+                          : "#10b981",
                         width: "28px",
                         height: "28px",
                         borderRadius: "4px",
@@ -634,7 +920,17 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                     >
                       {cat.icono}
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div
+                      style={{ flex: 1 }}
+                      onClick={() => {
+                        // Al hacer clic, expandir esta categoría y colapsar las demás
+                        const nuevasExpansiones = {};
+                        categorias.forEach((c) => {
+                          nuevasExpansiones[c.id] = c.id === cat.id;
+                        });
+                        setCategoriasExpandidas(nuevasExpansiones);
+                      }}
+                    >
                       <div
                         style={{
                           color: "#ffffff",
@@ -652,6 +948,13 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                       >
                         {materialesCat.length} materiales
                       </div>
+                    </div>
+                    {/* Switch de categoría */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ModernToggle
+                        checked={activada}
+                        onChange={() => toggleCategoriaConMateriales(cat.id)}
+                      />
                     </div>
                   </div>
                 );
@@ -892,7 +1195,7 @@ export default function Precarga() {
         .from("perfil")
         .select("rubros_seleccionados")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
       // Cargar rubros
       const { data: rubrosData } = await supabase

@@ -223,11 +223,11 @@ export default function App() {
   }, [session]);
 
   async function cargarPerfil() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("perfil")
       .select("*")
       .eq("user_id", session.user.id)
-      .single();
+      .maybeSingle();
 
     let perfilData = data;
 
@@ -240,16 +240,19 @@ export default function App() {
 
       const { data: nuevoPerfil } = await supabase
         .from("perfil")
-        .insert([
-          {
-            user_id: session.user.id,
-            nombre_negocio: nombreNegocio,
-            email_contacto: session.user.email || null,
-            estado: "prueba",
-            rubros_seleccionados: null,
-            fecha_inicio_prueba: new Date().toISOString(),
-          },
-        ])
+        .upsert(
+          [
+            {
+              user_id: session.user.id,
+              nombre_negocio: nombreNegocio,
+              email_contacto: session.user.email || null,
+              estado: "prueba",
+              rubros_seleccionados: null,
+              fecha_inicio_prueba: new Date().toISOString(),
+            },
+          ],
+          { onConflict: "user_id" },
+        )
         .select()
         .single();
 

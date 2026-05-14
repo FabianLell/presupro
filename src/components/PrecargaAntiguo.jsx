@@ -418,7 +418,7 @@ export default function Precarga() {
         .from("perfil")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       setPerfil(perfilData);
 
