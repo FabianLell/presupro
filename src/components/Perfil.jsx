@@ -57,7 +57,7 @@ export default function Perfil({ onPerfilActualizado }) {
       .from("perfil")
       .select("*")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
     if (data) {
       const perfilForm = { ...VACIO, ...data };
       setForm(perfilForm);

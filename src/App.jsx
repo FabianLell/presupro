@@ -14,6 +14,7 @@ import Presupuestos from "./components/Presupuestos";
 import Admin from "./components/Admin";
 import Perfil from "./components/Perfil";
 import Onboarding from "./components/Onboarding";
+import Precarga from "./components/Precarga";
 
 // Hook para detectar mobile
 function useIsMobile() {
@@ -40,6 +41,7 @@ const SECCIONES = [
   { id: "clientes", label: "Clientes", icono: "👤" },
   { id: "materiales", label: "Materiales", icono: "🔩" },
   { id: "servicios", label: "Servicios", icono: "🔧" },
+  { id: "precarga", label: "Precarga", icono: "📚" },
 ];
 
 const TITULO_SECCION = {
@@ -47,6 +49,7 @@ const TITULO_SECCION = {
   clientes: "Clientes",
   materiales: "Materiales",
   servicios: "Servicios",
+  precarga: "Precarga",
   perfil: "Editar perfil",
   admin: "Panel Admin",
 };
@@ -220,11 +223,11 @@ export default function App() {
   }, [session]);
 
   async function cargarPerfil() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("perfil")
       .select("*")
       .eq("user_id", session.user.id)
-      .single();
+      .maybeSingle();
 
     let perfilData = data;
 
@@ -235,22 +238,36 @@ export default function App() {
         session.user.email?.split("@")[0] ||
         "Mi negocio";
 
-      const { data: nuevoPerfil } = await supabase
+      const { data: nuevoPerfil, error: insertError } = await supabase
         .from("perfil")
-        .insert([
-          {
-            user_id: session.user.id,
-            nombre_negocio: nombreNegocio,
-            email_contacto: session.user.email || null,
-            estado: "prueba",
-            rubros_seleccionados: null,
-            fecha_inicio_prueba: new Date().toISOString(),
-          },
-        ])
+        .upsert(
+          [
+            {
+              user_id: session.user.id,
+              nombre_negocio: nombreNegocio,
+              email_contacto: session.user.email || null,
+              estado: "prueba",
+              rubros_seleccionados: null,
+              fecha_inicio_prueba: new Date().toISOString(),
+            },
+          ],
+          { onConflict: "user_id" },
+        )
         .select()
-        .single();
+        .maybeSingle();
 
-      perfilData = nuevoPerfil;
+      if (insertError) {
+        console.error("Error al crear perfil:", insertError);
+        // Si falla, intentar cargar nuevamente (podría haber sido creado por un trigger)
+        const { data: retryData } = await supabase
+          .from("perfil")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        perfilData = retryData;
+      } else {
+        perfilData = nuevoPerfil;
+      }
     }
 
     setPerfil(perfilData || null);
@@ -580,6 +597,7 @@ export default function App() {
             {seccion === "clientes" && (
               <Clientes soloLectura={estadoCuenta.soloLectura} />
             )}
+            {seccion === "precarga" && <Precarga />}
             {seccion === "perfil" && (
               <Perfil onPerfilActualizado={cargarPerfil} />
             )}
@@ -635,6 +653,13 @@ export default function App() {
                 >
                   <span className="mobile-more-icon">👤</span>
                   <span>Editar perfil</span>
+                </button>
+                <button
+                  className="mobile-more-btn"
+                  onClick={() => navegarA("precarga")}
+                >
+                  <span className="mobile-more-icon">📚</span>
+                  <span>Precarga</span>
                 </button>
                 {isAdmin && (
                   <button
