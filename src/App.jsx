@@ -238,7 +238,7 @@ export default function App() {
         session.user.email?.split("@")[0] ||
         "Mi negocio";
 
-      const { data: nuevoPerfil } = await supabase
+      const { data: nuevoPerfil, error: insertError } = await supabase
         .from("perfil")
         .upsert(
           [
@@ -254,9 +254,20 @@ export default function App() {
           { onConflict: "user_id" },
         )
         .select()
-        .single();
+        .maybeSingle();
 
-      perfilData = nuevoPerfil;
+      if (insertError) {
+        console.error("Error al crear perfil:", insertError);
+        // Si falla, intentar cargar nuevamente (podría haber sido creado por un trigger)
+        const { data: retryData } = await supabase
+          .from("perfil")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        perfilData = retryData;
+      } else {
+        perfilData = nuevoPerfil;
+      }
     }
 
     setPerfil(perfilData || null);
