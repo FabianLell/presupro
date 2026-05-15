@@ -70,7 +70,10 @@ export default function Perfil({ onPerfilActualizado }) {
   }
 
   async function cargarRubros() {
-    const { data } = await supabase.from("rubros").select("*").order("nombre");
+    const { data } = await supabase
+      .from("system_rubros")
+      .select("*")
+      .order("nombre");
     setRubros(data || []);
   }
 

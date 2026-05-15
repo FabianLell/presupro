@@ -82,16 +82,13 @@ export default function Servicios({ soloLectura }) {
 
   async function cargar() {
     setCargando(true);
-    let query = supabase
-      .from("servicios")
-      .select("*")
-      .order("nombre");
-    
-    // Filtrar por deleted_at según el toggle
+    let query = supabase.from("user_servicios").select("*").order("nombre");
+
+    // Filtrar por is_active según el toggle
     if (!mostrarEliminados) {
-      query = query.is("deleted_at", null);
+      query = query.eq("is_active", true);
     }
-    
+
     const { data, error } = await query;
     if (error) setError("Error al cargar servicios");
     else setServicios(data || []);
@@ -201,7 +198,7 @@ export default function Servicios({ soloLectura }) {
 
     if (!esNuevo && selId) {
       const { error } = await supabase
-        .from("servicios")
+        .from("user_servicios")
         .update(datos)
         .eq("id", selId);
       if (error) {
@@ -213,7 +210,7 @@ export default function Servicios({ soloLectura }) {
       dirtyForm.markAsClean();
     } else {
       const { data, error } = await supabase
-        .from("servicios")
+        .from("user_servicios")
         .insert([datos])
         .select()
         .single();
@@ -233,10 +230,10 @@ export default function Servicios({ soloLectura }) {
   }
 
   async function eliminar(id) {
-    // Soft delete: actualizar deleted_at en lugar de borrar
+    // Soft delete: actualizar is_active a false en lugar de borrar
     const { error } = await supabase
-      .from("servicios")
-      .update({ deleted_at: new Date().toISOString() })
+      .from("user_servicios")
+      .update({ is_active: false })
       .eq("id", id);
     if (error) {
       setError("Error al eliminar");
@@ -248,12 +245,12 @@ export default function Servicios({ soloLectura }) {
     setConfirmEliminar(null);
     cargar();
   }
-  
+
   async function restaurar(id) {
-    // Restaurar: setear deleted_at a null
+    // Restaurar: setear is_active a true
     const { error } = await supabase
-      .from("servicios")
-      .update({ deleted_at: null })
+      .from("user_servicios")
+      .update({ is_active: true })
       .eq("id", id);
     if (error) {
       setError("Error al restaurar");
@@ -295,10 +292,13 @@ export default function Servicios({ soloLectura }) {
                 + Nuevo
               </button>
             )}
-            {!soloLectura && selId && !modoEdicion && !esNuevo && (
+            {!soloLectura &&
+              selId &&
+              !modoEdicion &&
+              !esNuevo &&
               (() => {
-                const servicio = servicios.find(s => s.id === selId);
-                const isEliminado = servicio?.deleted_at;
+                const servicio = servicios.find((s) => s.id === selId);
+                const isEliminado = !servicio?.is_active;
                 return !isEliminado ? (
                   <button
                     className="btn btn-secondary"
@@ -307,12 +307,14 @@ export default function Servicios({ soloLectura }) {
                     <IconoEditar /> Editar
                   </button>
                 ) : null;
-              })()
-            )}
-            {!soloLectura && selId && !esNuevo && !modoEdicion && (
+              })()}
+            {!soloLectura &&
+              selId &&
+              !esNuevo &&
+              !modoEdicion &&
               (() => {
-                const servicio = servicios.find(s => s.id === selId);
-                const isEliminado = servicio?.deleted_at;
+                const servicio = servicios.find((s) => s.id === selId);
+                const isEliminado = !servicio?.is_active;
                 return isEliminado ? (
                   <button
                     className="btn btn-primary"
@@ -328,8 +330,7 @@ export default function Servicios({ soloLectura }) {
                     <IconoEliminar /> Eliminar
                   </button>
                 );
-              })()
-            )}
+              })()}
             {modoEdicion && (
               <>
                 <button className="btn btn-primary" onClick={guardar}>
@@ -379,14 +380,16 @@ export default function Servicios({ soloLectura }) {
             onChange={(e) => setBusqueda(e.target.value)}
             style={{ flex: 1 }}
           />
-          <label style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: "0.5rem", 
-            fontSize: "0.9rem", 
-            color: "#888",
-            whiteSpace: "nowrap"
-          }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontSize: "0.9rem",
+              color: "#888",
+              whiteSpace: "nowrap",
+            }}
+          >
             <input
               type="checkbox"
               checked={mostrarEliminados}
@@ -415,25 +418,29 @@ export default function Servicios({ soloLectura }) {
               {filtrados.map((s) => (
                 <tr
                   key={s.id}
-                  className={`${selId === s.id ? "seleccionado" : ""} ${s.deleted_at ? "eliminado" : ""}`}
+                  className={`${selId === s.id ? "seleccionado" : ""} ${!s.is_active ? "eliminado" : ""}`}
                   onClick={() => seleccionar(s)}
-                  style={s.deleted_at ? { 
-                    color: "#999", 
-                    textDecoration: "line-through",
-                    opacity: 0.7 
-                  } : {}}
+                  style={
+                    !s.is_active
+                      ? {
+                          color: "#999",
+                          textDecoration: "line-through",
+                          opacity: 0.7,
+                        }
+                      : {}
+                  }
                 >
                   <td style={{ textAlign: "left" }}>
-                    <span>
-                      {s.nombre}
-                    </span>
-                    {s.deleted_at && (
-                      <span style={{ 
-                        fontSize: "0.7rem", 
-                        color: "#ff6b6b", 
-                        fontWeight: "bold",
-                        marginLeft: "0.5rem"
-                      }}>
+                    <span>{s.nombre}</span>
+                    {!s.is_active && (
+                      <span
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "#ff6b6b",
+                          fontWeight: "bold",
+                          marginLeft: "0.5rem",
+                        }}
+                      >
                         ELIMINADO
                       </span>
                     )}
@@ -460,7 +467,8 @@ export default function Servicios({ soloLectura }) {
                 margin: "0.5rem 0 1rem",
               }}
             >
-              El servicio será archivado y no aparecerá en los listados. Podrás restaurarlo más tarde si es necesario.
+              El servicio será archivado y no aparecerá en los listados. Podrás
+              restaurarlo más tarde si es necesario.
             </p>
             <div className="modal-footer">
               <button

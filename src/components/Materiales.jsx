@@ -115,13 +115,13 @@ export default function Materiales({ soloLectura }) {
     setCargando(true);
 
     let query = supabase
-      .from("materiales")
-      .select(`*, categorias ( nombre )`)
+      .from("user_materiales")
+      .select(`*, user_categorias ( nombre )`)
       .order("nombre");
 
-    // Filtrar por deleted_at según el toggle
+    // Filtrar por is_active según el toggle
     if (!mostrarEliminados) {
-      query = query.is("deleted_at", null);
+      query = query.eq("is_active", true);
     }
 
     const { data, error } = await query;
@@ -136,9 +136,9 @@ export default function Materiales({ soloLectura }) {
     setCargandoCategorias(true);
 
     const { data } = await supabase
-      .from("categorias")
+      .from("user_categorias")
       .select("id, nombre")
-      .is("deleted_at", null)
+      .eq("is_active", true)
       .order("nombre");
 
     setCategorias(data || []);
@@ -255,7 +255,7 @@ export default function Materiales({ soloLectura }) {
 
     if (!esNuevo && selId) {
       const { error } = await supabase
-        .from("materiales")
+        .from("user_materiales")
         .update(datos)
         .eq("id", selId);
 
@@ -268,7 +268,7 @@ export default function Materiales({ soloLectura }) {
       dirtyForm.markAsClean();
     } else {
       const { data, error } = await supabase
-        .from("materiales")
+        .from("user_materiales")
         .insert([datos])
         .select()
         .single();
@@ -290,10 +290,10 @@ export default function Materiales({ soloLectura }) {
   }
 
   async function eliminar(id) {
-    // Soft delete: actualizar deleted_at en lugar de borrar
+    // Soft delete: actualizar is_active a false en lugar de borrar
     const { error } = await supabase
-      .from("materiales")
-      .update({ deleted_at: new Date().toISOString() })
+      .from("user_materiales")
+      .update({ is_active: false })
       .eq("id", id);
     if (error) {
       setError("Error al eliminar");
@@ -307,10 +307,10 @@ export default function Materiales({ soloLectura }) {
   }
 
   async function restaurar(id) {
-    // Restaurar: setear deleted_at a null
+    // Restaurar: setear is_active a true
     const { error } = await supabase
-      .from("materiales")
-      .update({ deleted_at: null })
+      .from("user_materiales")
+      .update({ is_active: true })
       .eq("id", id);
     if (error) {
       setError("Error al restaurar");
@@ -330,7 +330,7 @@ export default function Materiales({ soloLectura }) {
     const userId = await getUserId();
 
     const { data, error } = await supabase
-      .from("categorias")
+      .from("user_categorias")
       .insert([{ user_id: userId, nombre: nuevaCategoria.trim() }])
       .select()
       .single();
@@ -365,7 +365,7 @@ export default function Materiales({ soloLectura }) {
 
     if (editCategoria) {
       const { error } = await supabase
-        .from("categorias")
+        .from("user_categorias")
         .update({ nombre: formCategoria.nombre.trim(), user_id: userId })
         .eq("id", editCategoria.id);
       if (error) {
@@ -377,7 +377,7 @@ export default function Materiales({ soloLectura }) {
       setOkCategoria("Categoría actualizada");
     } else {
       const { data, error } = await supabase
-        .from("categorias")
+        .from("user_categorias")
         .insert([{ user_id: userId, nombre: formCategoria.nombre.trim() }])
         .select()
         .single();
@@ -407,10 +407,10 @@ export default function Materiales({ soloLectura }) {
 
   async function eliminarCategoria(id) {
     if (!confirm("¿Eliminar esta categoría?")) return;
-    // Soft delete: actualizar deleted_at en lugar de borrar
+    // Soft delete: actualizar is_active a false en lugar de borrar
     const { error } = await supabase
-      .from("categorias")
-      .update({ deleted_at: new Date().toISOString() })
+      .from("user_categorias")
+      .update({ is_active: false })
       .eq("id", id);
     if (error) return setErrorCategoria("Error al eliminar");
     setCategorias((prev) => prev.filter((c) => c.id !== id));
@@ -455,7 +455,7 @@ export default function Materiales({ soloLectura }) {
               !esNuevo &&
               (() => {
                 const material = materiales.find((m) => m.id === selId);
-                const isEliminado = material?.deleted_at;
+                const isEliminado = !material?.is_active;
                 return !isEliminado ? (
                   <button
                     className="btn btn-secondary"
@@ -471,7 +471,7 @@ export default function Materiales({ soloLectura }) {
               !modoEdicion &&
               (() => {
                 const material = materiales.find((m) => m.id === selId);
-                const isEliminado = material?.deleted_at;
+                const isEliminado = !material?.is_active;
                 return isEliminado ? (
                   <button
                     className="btn btn-primary"
@@ -655,10 +655,10 @@ export default function Materiales({ soloLectura }) {
                   {filtrados.map((m) => (
                     <tr
                       key={m.id}
-                      className={`${selId === m.id ? "seleccionado" : ""} ${m.deleted_at ? "eliminado" : ""}`}
+                      className={`${selId === m.id ? "seleccionado" : ""} ${!m.is_active ? "eliminado" : ""}`}
                       onClick={() => seleccionar(m)}
                       style={
-                        m.deleted_at
+                        !m.is_active
                           ? {
                               color: "#999",
                               textDecoration: "line-through",
@@ -669,7 +669,7 @@ export default function Materiales({ soloLectura }) {
                     >
                       <td style={{ textAlign: "left" }}>
                         <span>{m.nombre}</span>
-                        {m.deleted_at && (
+                        {!m.is_active && (
                           <span
                             style={{
                               fontSize: "0.7rem",
@@ -682,7 +682,7 @@ export default function Materiales({ soloLectura }) {
                           </span>
                         )}
                       </td>
-                      <td>{m.categorias?.nombre || "—"}</td>
+                      <td>{m.user_categorias?.nombre || "—"}</td>
                       <td
                         style={{
                           textAlign: "center",
@@ -710,10 +710,10 @@ export default function Materiales({ soloLectura }) {
                 {filtrados.map((m) => (
                   <div
                     key={m.id}
-                    className={`mobile-material-item ${selId === m.id ? "seleccionado" : ""} ${m.deleted_at ? "eliminado" : ""}`}
+                    className={`mobile-material-item ${selId === m.id ? "seleccionado" : ""} ${!m.is_active ? "eliminado" : ""}`}
                     onClick={() => seleccionar(m)}
                     style={
-                      m.deleted_at
+                      !m.is_active
                         ? {
                             opacity: 0.6,
                             textDecoration: "line-through",
@@ -787,7 +787,7 @@ export default function Materiales({ soloLectura }) {
                           marginRight: "0.5rem",
                         }}
                       >
-                        {m.categorias?.nombre || "Sin categoría"}:
+                        {m.user_categorias?.nombre || "Sin categoría"}:
                       </span>
                       {m.descripcion && (
                         <span
@@ -806,7 +806,7 @@ export default function Materiales({ soloLectura }) {
                     </div>
 
                     {/* Estado eliminado */}
-                    {m.deleted_at && (
+                    {!m.is_active && (
                       <div
                         style={{
                           fontSize: "0.7rem",

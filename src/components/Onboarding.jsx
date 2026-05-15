@@ -13,7 +13,10 @@ export default function Onboarding({ onComplete }) {
   }, []);
 
   async function cargarRubros() {
-    const { data } = await supabase.from("rubros").select("*").order("nombre");
+    const { data } = await supabase
+      .from("system_rubros")
+      .select("*")
+      .order("nombre");
     setRubros(data || []);
     setCargando(false);
   }
@@ -33,18 +36,18 @@ export default function Onboarding({ onComplete }) {
     // 1 — Cargar categorías y materiales de los rubros seleccionados
     if (seleccionados.length > 0) {
       const { data: rubroCats } = await supabase
-        .from("rubro_categorias")
+        .from("system_categorias")
         .select("*")
-        .in("rubro_id", seleccionados);
+        .in("system_rubro_id", seleccionados);
 
       const { data: rubroMats } = await supabase
-        .from("rubro_materiales")
+        .from("system_materiales")
         .select("*")
-        .in("rubro_id", seleccionados);
+        .in("system_rubro_id", seleccionados);
 
       // 2 — Cargar categorías existentes del usuario
       const { data: catsExistentes } = await supabase
-        .from("categorias")
+        .from("user_categorias")
         .select("id, nombre")
         .eq("user_id", userId);
 
@@ -60,7 +63,7 @@ export default function Onboarding({ onComplete }) {
       let catsInsertadas = [];
       if (catsAInsertar.length > 0) {
         const { data: nuevasCats } = await supabase
-          .from("categorias")
+          .from("user_categorias")
           .insert(
             catsAInsertar.map((c) => ({
               user_id: userId,
@@ -86,7 +89,7 @@ export default function Onboarding({ onComplete }) {
 
       // 6 — Cargar materiales existentes del usuario
       const { data: matsExistentes } = await supabase
-        .from("materiales")
+        .from("user_materiales")
         .select("nombre")
         .eq("user_id", userId);
 
@@ -100,11 +103,11 @@ export default function Onboarding({ onComplete }) {
       );
 
       if (matsAInsertar.length > 0) {
-        await supabase.from("materiales").insert(
+        await supabase.from("user_materiales").insert(
           matsAInsertar.map((m) => {
-            // Obtener el nombre de la categoría desde rubro_categorias usando rubro_categoria_id
+            // Obtener el nombre de la categoría desde system_categorias usando system_categoria_id
             const categoriaRubro = (rubroCats || []).find(
-              (rc) => rc.id === m.rubro_categoria_id,
+              (rc) => rc.id === m.system_categoria_id,
             );
             const nombreCat = categoriaRubro?.nombre || null;
             const categoriaId = nombreCat

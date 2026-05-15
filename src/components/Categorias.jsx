@@ -18,9 +18,9 @@ export default function Categorias() {
   async function cargar() {
     setCargando(true);
     const { data, error } = await supabase
-      .from("categorias")
+      .from("user_categorias")
       .select("*")
-      .is("deleted_at", null)
+      .eq("is_active", true)
       .order("nombre");
     if (error) setError("Error al cargar categorías");
     else setCategorias(data);
@@ -44,13 +44,13 @@ export default function Categorias() {
 
     if (editId) {
       const { error } = await supabase
-        .from("categorias")
+        .from("user_categorias")
         .update(datos)
         .eq("id", editId);
       if (error) return setError("Error al actualizar");
       setOk("Categoría actualizada");
     } else {
-      const { error } = await supabase.from("categorias").insert([datos]);
+      const { error } = await supabase.from("user_categorias").insert([datos]);
       if (error) return setError("Error al guardar");
       setOk("Categoría agregada");
     }
@@ -70,10 +70,10 @@ export default function Categorias() {
 
   async function eliminar(id) {
     if (!confirm("¿Eliminar esta categoría?")) return;
-    // Soft delete: actualizar deleted_at en lugar de borrar
+    // Soft delete: actualizar is_active a false en lugar de borrar
     const { error } = await supabase
-      .from("categorias")
-      .update({ deleted_at: new Date().toISOString() })
+      .from("user_categorias")
+      .update({ is_active: false })
       .eq("id", id);
     if (error) return setError("Error al eliminar");
     cargar();

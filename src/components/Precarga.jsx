@@ -234,7 +234,7 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
       try {
         // Cargar categorías del rubro
         const { data: cats } = await supabase
-          .from("rubro_categorias")
+          .from("system_categorias")
           .select(
             `
             id,
@@ -242,11 +242,11 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             icono
           `,
           )
-          .eq("rubro_id", rubro.id);
+          .eq("system_rubro_id", rubro.id);
 
         // Cargar materiales del rubro
         const { data: mats } = await supabase
-          .from("rubro_materiales")
+          .from("system_materiales")
           .select(
             `
             id,
@@ -254,17 +254,17 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             descripcion,
             unidad,
             precio_unitario,
-            rubro_categoria_id
+            system_categoria_id
           `,
           )
-          .eq("rubro_id", rubro.id);
+          .eq("system_rubro_id", rubro.id);
 
         if (!isMounted) return;
 
         // Organizar datos por categorías
         const materialesPorCategoria = {};
         mats?.forEach((mat) => {
-          const catId = mat.rubro_categoria_id;
+          const catId = mat.system_categoria_id;
           if (!materialesPorCategoria[catId]) {
             materialesPorCategoria[catId] = [];
           }
@@ -1199,7 +1199,7 @@ export default function Precarga() {
 
       // Cargar rubros
       const { data: rubrosData } = await supabase
-        .from("rubros")
+        .from("system_rubros")
         .select("*")
         .order("nombre");
 
