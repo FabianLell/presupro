@@ -18,7 +18,7 @@ const VACIO = {
   descripcion: "",
   unidad: "unidad",
   precio_unitario: "",
-  categoria_id: "",
+  user_categoria_id: "",
 };
 
 function IconoEditar() {
@@ -103,8 +103,8 @@ export default function Materiales({ soloLectura }) {
   }, [dirtyForm.isDirty, modoEdicion]);
 
   useEffect(() => {
-    cargar();
     cargarCategorias();
+    cargar();
   }, []);
 
   useEffect(() => {
@@ -114,9 +114,12 @@ export default function Materiales({ soloLectura }) {
   async function cargar() {
     setCargando(true);
 
+    const userId = await getUserId();
+
     let query = supabase
       .from("user_materiales")
-      .select(`*, user_categorias ( nombre )`)
+      .select("*")
+      .eq("user_id", userId)
       .order("nombre");
 
     // Filtrar por is_active según el toggle
@@ -126,18 +129,30 @@ export default function Materiales({ soloLectura }) {
 
     const { data, error } = await query;
 
-    if (error) setError("Error al cargar materiales");
-    else setMateriales(data || []);
-
-    setCargando(false);
+    if (error) {
+      setError("Error al cargar materiales: " + error.message);
+      setCargando(false);
+    } else {
+      const materialesConCategoria = (data || []).map((m) => ({
+        ...m,
+        user_categorias: m.user_categoria_id
+          ? categorias.find((c) => c.id === m.user_categoria_id)
+          : null,
+      }));
+      setMateriales(materialesConCategoria);
+      setCargando(false);
+    }
   }
 
   async function cargarCategorias() {
     setCargandoCategorias(true);
 
+    const userId = await getUserId();
+
     const { data } = await supabase
       .from("user_categorias")
       .select("id, nombre")
+      .eq("user_id", userId)
       .eq("is_active", true)
       .order("nombre");
 
@@ -180,7 +195,7 @@ export default function Materiales({ soloLectura }) {
       descripcion: m.descripcion || "",
       unidad: m.unidad,
       precio_unitario: m.precio_unitario || "",
-      categoria_id: m.categoria_id || "",
+      user_categoria_id: m.user_categoria_id || "",
     };
     setForm(materialForm);
     dirtyForm.updateData(materialForm);
@@ -229,7 +244,7 @@ export default function Materiales({ soloLectura }) {
         descripcion: dirtyForm.currentData.descripcion || "",
         unidad: dirtyForm.currentData.unidad || "",
         precio_unitario: dirtyForm.currentData.precio_unitario || "",
-        categoria_id: dirtyForm.currentData.categoria_id || null,
+        user_categoria_id: dirtyForm.currentData.user_categoria_id || null,
       };
     }
 
@@ -250,7 +265,7 @@ export default function Materiales({ soloLectura }) {
       descripcion: currentForm.descripcion.trim(),
       unidad: currentForm.unidad,
       precio_unitario: parseFloat(currentForm.precio_unitario),
-      categoria_id: currentForm.categoria_id || null,
+      user_categoria_id: currentForm.user_categoria_id || null,
     };
 
     if (!esNuevo && selId) {
@@ -349,7 +364,7 @@ export default function Materiales({ soloLectura }) {
     setCategorias((prev) =>
       [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)),
     );
-    setForm((prev) => ({ ...prev, categoria_id: data.id }));
+    setForm((prev) => ({ ...prev, user_categoria_id: data.id }));
     setNuevaCategoria("");
     setErrorCategoria("");
     setMostrarModalCategoria(false);
@@ -451,8 +466,8 @@ export default function Materiales({ soloLectura }) {
             )}
             {!soloLectura &&
               selId &&
-              !modoEdicion &&
               !esNuevo &&
+              !modoEdicion &&
               (() => {
                 const material = materiales.find((m) => m.id === selId);
                 const isEliminado = !material?.is_active;
@@ -524,8 +539,8 @@ export default function Materiales({ soloLectura }) {
         <div className="form-row" style={{ marginTop: "0.65rem" }}>
           <div style={{ position: "relative", flex: 1 }}>
             <select
-              name="categoria_id"
-              value={form.categoria_id || ""}
+              name="user_categoria_id"
+              value={form.user_categoria_id || ""}
               onChange={handleChange}
               disabled={!modoEdicion}
               style={{ width: "100%" }}

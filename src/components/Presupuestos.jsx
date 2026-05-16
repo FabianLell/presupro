@@ -2326,7 +2326,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                         onClick={() => cargarDetalle(p.id)}
                         style={{
                           cursor: "pointer",
-                          ...(p.deleted_at
+                          ...(!p.is_active
                             ? {
                                 color: "#999",
                                 textDecoration: "line-through",
@@ -2334,7 +2334,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                               }
                             : {}),
                         }}
-                        className={p.deleted_at ? "eliminado" : ""}
+                        className={!p.is_active ? "eliminado" : ""}
                       >
                         <td
                           style={{
@@ -2353,7 +2353,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                           ) : (
                             <span style={{ color: "#888" }}>—</span>
                           )}
-                          {p.deleted_at && (
+                          {!p.is_active && (
                             <span
                               style={{
                                 fontSize: "0.7rem",

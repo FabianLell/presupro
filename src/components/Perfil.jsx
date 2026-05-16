@@ -22,10 +22,6 @@ export default function Perfil({ onPerfilActualizado }) {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const fileInputRef = useRef(null);
-  const [rubros, setRubros] = useState([]);
-  const [rubrosSeleccionados, setRubrosSeleccionados] = useState([]);
-  const [procesandoRubros, setProcesandoRubros] = useState(false);
-  const [okRubros, setOkRubros] = useState("");
 
   // Hook de protección contra pérdida de datos
   const dirtyForm = useDirtyForm(VACIO, async () => {
@@ -63,50 +59,8 @@ export default function Perfil({ onPerfilActualizado }) {
       setForm(perfilForm);
       dirtyForm.updateData(perfilForm);
       dirtyForm.markAsClean();
-      setRubrosSeleccionados(data.rubros_seleccionados || []);
     }
-    await cargarRubros();
     setCargando(false);
-  }
-
-  async function cargarRubros() {
-    const { data } = await supabase
-      .from("system_rubros")
-      .select("*")
-      .order("nombre");
-    setRubros(data || []);
-  }
-
-  function toggleRubro(id) {
-    setRubrosSeleccionados((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
-    );
-  }
-
-  async function agregarRubros() {
-    setProcesandoRubros(true);
-    setOkRubros("");
-
-    const userId = await getUserId();
-
-    // Actualizar perfil con los rubros seleccionados - el trigger se encarga del sync
-    const { error } = await supabase
-      .from("perfil")
-      .upsert(
-        { user_id: userId, rubros_seleccionados: rubrosSeleccionados },
-        { onConflict: "user_id" },
-      );
-
-    if (error) {
-      setError("Error al actualizar rubros");
-      setProcesandoRubros(false);
-      return;
-    }
-
-    setForm((prev) => ({ ...prev, rubros_seleccionados: rubrosSeleccionados }));
-    setOkRubros("Rubros actualizados correctamente");
-    setProcesandoRubros(false);
-    if (onPerfilActualizado) onPerfilActualizado();
   }
 
   function handleChange(e) {
@@ -349,72 +303,6 @@ export default function Perfil({ onPerfilActualizado }) {
           disabled={guardando}
         >
           {guardando ? "Guardando..." : "Guardar perfil"}
-        </button>
-      </div>
-      <div className="card">
-        <h2>Rubros del negocio</h2>
-        <p
-          style={{
-            color: "#888",
-            fontSize: "0.88rem",
-            marginBottom: "1rem",
-            lineHeight: "1.6",
-          }}
-        >
-          Seleccioná los rubros en los que trabajás. Al agregar un rubro nuevo
-          se cargarán automáticamente sus categorías y materiales de referencia.
-          No se duplicarán si ya los tenés cargados.
-        </p>
-
-        {okRubros && <p className="msg-ok">{okRubros}</p>}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "0.6rem",
-            marginBottom: "1rem",
-          }}
-        >
-          {rubros.map((r) => {
-            const activo = rubrosSeleccionados.includes(r.id);
-            return (
-              <button
-                key={r.id}
-                onClick={() => toggleRubro(r.id)}
-                style={{
-                  padding: "0.75rem 1rem",
-                  borderRadius: "8px",
-                  border: activo ? "2px solid #2563eb" : "1px solid #2a2a2a",
-                  background: activo ? "#1e3a5f" : "#222",
-                  color: activo ? "#fff" : "#ccc",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  fontSize: "0.9rem",
-                  transition: "all 0.15s",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                <span>{r.icono}</span>
-                {r.nombre}
-                {activo && (
-                  <span style={{ marginLeft: "auto", color: "#60a5fa" }}>
-                    ?
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <button
-          className="btn btn-primary"
-          onClick={agregarRubros}
-          disabled={procesandoRubros}
-        >
-          {procesandoRubros ? "Procesando..." : "Guardar rubros"}
         </button>
       </div>
     </>

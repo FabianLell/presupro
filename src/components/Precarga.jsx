@@ -215,7 +215,7 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
 }
 
 // Vista detallada del rubro con tree-view
-function VistaDetalladaRubro({ rubro, onVolver }) {
+function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
   const [categorias, setCategorias] = useState([]);
   const [materiales, setMateriales] = useState({});
   const [categoriasExpandidas, setCategoriasExpandidas] = useState({});
@@ -232,6 +232,8 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
       if (!isMounted) return;
 
       try {
+        setCargando(true);
+
         // Cargar categorías del rubro
         const { data: cats } = await supabase
           .from("system_categorias")
@@ -257,7 +259,7 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             system_categoria_id
           `,
           )
-          .eq("system_rubro_id", rubro.id);
+          .in("system_categoria_id", cats?.map((c) => c.id) || []);
 
         if (!isMounted) return;
 
@@ -279,6 +281,80 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
 
         setCategorias(cats || []);
         setMateriales(materialesPorCategoria);
+
+        // Cargar user_materiales del usuario para este rubro
+        const userId = await getUserId();
+        const { data: userCategorias } = await supabase
+          .from("user_categorias")
+          .select("id, system_categoria_id")
+          .eq("user_id", userId);
+
+        const userCategoriaIds = userCategorias?.map((uc) => uc.id) || [];
+
+        const { data: userMateriales } = await supabase
+          .from("user_materiales")
+          .select("system_material_id, user_categoria_id, is_active")
+          .eq("user_id", userId)
+          .in("user_categoria_id", userCategoriaIds)
+          .not("system_material_id", "is", null);
+
+        if (!isMounted) return;
+
+        // Mapear system_material_id a system_categoria_id
+        const materialToCategoria = {};
+        userCategorias?.forEach((uc) => {
+          const matsInCat =
+            userMateriales?.filter((um) => um.user_categoria_id === uc.id) ||
+            [];
+          matsInCat.forEach((um) => {
+            if (um.system_material_id) {
+              materialToCategoria[um.system_material_id] =
+                uc.system_categoria_id;
+            }
+          });
+        });
+
+        // Marcar materiales activados según user_materiales
+        const materialesActivadosState = {};
+        const categoriasActivadasState = {};
+
+        userMateriales?.forEach((um) => {
+          if (um.system_material_id && um.is_active) {
+            materialesActivadosState[um.system_material_id] = true;
+            const catId = materialToCategoria[um.system_material_id];
+            if (catId) {
+              categoriasActivadasState[catId] = true;
+            }
+          }
+        });
+
+        setMaterialesActivados(materialesActivadosState);
+        setCategoriasActivadas(categoriasActivadasState);
+
+        // Si el rubro está seleccionado, activar todas sus categorías y materiales
+        if (rubrosSeleccionados && rubrosSeleccionados.includes(rubro.id)) {
+          const todasCategoriasActivadas = {};
+          const todosMaterialesActivados = {};
+
+          cats.forEach((cat) => {
+            todasCategoriasActivadas[cat.id] = true;
+            const materialesCat = materialesPorCategoria[cat.id] || [];
+            materialesCat.forEach((mat) => {
+              todosMaterialesActivados[mat.id] = true;
+            });
+          });
+
+          setCategoriasActivadas(todasCategoriasActivadas);
+          setMaterialesActivados({
+            ...materialesActivadosState,
+            ...todosMaterialesActivados,
+          });
+        }
+
+        // Seleccionar la primera categoría por defecto
+        if (cats && cats.length > 0) {
+          setCategoriasExpandidas({ [cats[0].id]: true });
+        }
       } catch (error) {
         if (isMounted) {
           console.error("Error al cargar datos del rubro:", error);
@@ -338,6 +414,151 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
     }));
   }
 
+  function toggleTodosMaterialesCategoria(activar) {
+    const categoriaSeleccionada = categorias.find(
+      (cat) => categoriasExpandidas[cat.id],
+    );
+    if (!categoriaSeleccionada) return;
+
+    const materialesCat = materiales[categoriaSeleccionada.id] || [];
+    const nuevasActivacionesMateriales = { ...materialesActivados };
+
+    materialesCat.forEach((mat) => {
+      nuevasActivacionesMateriales[mat.id] = activar;
+    });
+
+    setMaterialesActivados(nuevasActivacionesMateriales);
+  }
+
+  async function guardarCambiosMateriales() {
+    try {
+      const userId = await getUserId();
+
+      console.log("=== DEBUG: Iniciando guardarCambiosMateriales ===");
+      console.log("Categorías:", categorias);
+      console.log("Materiales:", materiales);
+      console.log("Materiales activados:", materialesActivados);
+
+      // Obtener user_categorias existentes
+      const { data: userCategorias } = await supabase
+        .from("user_categorias")
+        .select("id, system_categoria_id")
+        .eq("user_id", userId);
+
+      console.log("User categorías existentes:", userCategorias);
+
+      const systemCatToUserCat = {};
+      userCategorias?.forEach((uc) => {
+        systemCatToUserCat[uc.system_categoria_id] = uc.id;
+      });
+
+      // Crear user_categorias para todas las categorías del rubro
+      for (const cat of categorias) {
+        if (!systemCatToUserCat[cat.id]) {
+          console.log(`Creando user_categoria para ${cat.nombre} (${cat.id})`);
+          const { data: newCat, error: catError } = await supabase
+            .from("user_categorias")
+            .insert({
+              user_id: userId,
+              system_categoria_id: cat.id,
+              nombre: cat.nombre,
+            })
+            .select()
+            .single();
+
+          if (catError) {
+            console.error("Error creando user_categoria:", catError);
+          } else {
+            console.log("User categoría creada:", newCat);
+            systemCatToUserCat[cat.id] = newCat.id;
+          }
+        } else {
+          console.log(
+            `User categoría ya existe para ${cat.nombre}: ${systemCatToUserCat[cat.id]}`,
+          );
+        }
+      }
+
+      // Obtener todos los user_materiales existentes del usuario para este rubro
+      const userCategoriaIds = Object.values(systemCatToUserCat);
+      console.log("User categoria IDs:", userCategoriaIds);
+
+      const { data: userMateriales } = await supabase
+        .from("user_materiales")
+        .select("id, system_material_id, is_active, user_categoria_id")
+        .eq("user_id", userId)
+        .in("user_categoria_id", userCategoriaIds)
+        .not("system_material_id", "is", null);
+
+      console.log("User materiales existentes:", userMateriales);
+
+      const existingMaterials = {};
+      userMateriales?.forEach((um) => {
+        existingMaterials[um.system_material_id] = um;
+      });
+
+      // Procesar todas las categorías del rubro (no solo las que tienen materiales activados)
+      for (const cat of categorias) {
+        const userCatId = systemCatToUserCat[cat.id];
+        if (!userCatId) {
+          console.log(`No user_cat_id para categoría ${cat.nombre}, saltando`);
+          continue;
+        }
+
+        const materialesCat = materiales[cat.id] || [];
+        for (const mat of materialesCat) {
+          const activado = materialesActivados[mat.id];
+          const existing = existingMaterials[mat.id];
+
+          console.log(
+            `Material ${mat.nombre}: activado=${activado}, existing=${!!existing}`,
+          );
+
+          if (activado && !existing) {
+            // Crear nuevo user_material
+            console.log(`Creando user_material para ${mat.nombre}`);
+            const { error: matError } = await supabase
+              .from("user_materiales")
+              .insert({
+                user_id: userId,
+                user_categoria_id: userCatId,
+                system_material_id: mat.id,
+                nombre: mat.nombre,
+                descripcion: mat.descripcion,
+                unidad: mat.unidad,
+                precio_unitario: mat.precio,
+                is_active: true,
+              });
+            if (matError) {
+              console.error("Error creando user_material:", matError);
+            } else {
+              console.log(`User_material creado para ${mat.nombre}`);
+            }
+          } else if (activado && existing && !existing.is_active) {
+            // Reactivar material (baja lógica revertida)
+            console.log(`Reactivando user_material ${mat.nombre}`);
+            await supabase
+              .from("user_materiales")
+              .update({ is_active: true })
+              .eq("id", existing.id);
+          } else if (!activado && existing && existing.is_active) {
+            // Desactivar material (baja lógica)
+            console.log(`Desactivando user_material ${mat.nombre}`);
+            await supabase
+              .from("user_materiales")
+              .update({ is_active: false })
+              .eq("id", existing.id);
+          }
+        }
+      }
+
+      alert("Cambios aplicados correctamente");
+    } catch (error) {
+      console.error("Error al guardar cambios:", error);
+      alert("Error al aplicar los cambios");
+    }
+  }
+
   function seleccionarCategoriaParaConfigurar(cat) {
     setCategoriaSeleccionada(cat);
   }
@@ -378,11 +599,33 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
           justifyContent: "space-between",
         }}
       >
+        <button
+          onClick={onVolver}
+          style={{
+            backgroundColor: "#374151",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 16px",
+            fontSize: "14px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = "#4b5563";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = "#374151";
+          }}
+        >
+          ← Volver al Listado
+        </button>
+
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div
             style={{
               fontSize: "24px",
-              backgroundColor: "#10b981",
+              backgroundColor: "rgba(5, 150, 105, 0.2)",
               width: "40px",
               height: "40px",
               borderRadius: "8px",
@@ -416,56 +659,35 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {/* Switch maestro "todas" */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              backgroundColor: "#1f2937",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: "1px solid #374151",
-            }}
-          >
-            <span
-              style={{
-                color: "#94a3b8",
-                fontSize: "13px",
-                fontWeight: "500",
-              }}
-            >
-              Todas
-            </span>
-            <ModernToggle
-              checked={categorias.every((cat) => categoriasActivadas[cat.id])}
-              onChange={(checked) => toggleTodasCategorias(checked)}
-            />
-          </div>
-
-          <button
-            onClick={onVolver}
-            style={{
-              backgroundColor: "#374151",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "6px",
-              padding: "8px 16px",
-              fontSize: "14px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = "#4b5563";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = "#374151";
-            }}
-          >
-            ← Volver al Listado
-          </button>
-        </div>
+        <button
+          onClick={guardarCambiosMateriales}
+          style={{
+            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 16px",
+            fontSize: "14px",
+            fontWeight: "600",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            boxShadow: "0 1px 3px rgba(59, 130, 246, 0.2)",
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background =
+              "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)";
+            e.target.style.transform = "translateY(-1px)";
+            e.target.style.boxShadow = "0 2px 4px rgba(59, 130, 246, 0.3)";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background =
+              "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)";
+            e.target.style.transform = "translateY(0)";
+            e.target.style.boxShadow = "0 1px 3px rgba(59, 130, 246, 0.2)";
+          }}
+        >
+          Aplicar
+        </button>
       </div>
 
       {/* Contenido del tree-view */}
@@ -731,7 +953,7 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                   <div
                     style={{
                       fontSize: "20px",
-                      backgroundColor: "#10b981",
+                      backgroundColor: "rgba(5, 150, 105, 0.2)",
                       width: "36px",
                       height: "36px",
                       borderRadius: "6px",
@@ -856,18 +1078,50 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                 overflowY: "auto",
               }}
             >
-              <h3
+              <div
                 style={{
-                  color: "#ffffff",
-                  margin: "0 0 16px 0",
-                  fontSize: "16px",
-                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "16px",
                   borderBottom: "1px solid #374151",
                   paddingBottom: "8px",
                 }}
               >
-                Categorías
-              </h3>
+                <h3
+                  style={{
+                    color: "#ffffff",
+                    margin: "0",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                  }}
+                >
+                  Categorías
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "#94a3b8",
+                      fontSize: "13px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Todas
+                  </span>
+                  <ModernToggle
+                    checked={categorias.every(
+                      (cat) => categoriasActivadas[cat.id],
+                    )}
+                    onChange={(checked) => toggleTodasCategorias(checked)}
+                  />
+                </div>
+              </div>
               {categorias.map((cat) => {
                 const materialesCat = materiales[cat.id] || [];
                 const seleccionada = categoriasExpandidas[cat.id];
@@ -908,7 +1162,7 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                         fontSize: "16px",
                         backgroundColor: activada
                           ? "rgba(5, 150, 105, 0.2)"
-                          : "#10b981",
+                          : "rgba(55, 65, 81, 0.3)",
                         width: "28px",
                         height: "28px",
                         borderRadius: "4px",
@@ -971,18 +1225,60 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                 overflowY: "auto",
               }}
             >
-              <h3
+              <div
                 style={{
-                  color: "#ffffff",
-                  margin: "0 0 16px 0",
-                  fontSize: "16px",
-                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "16px",
                   borderBottom: "1px solid #374151",
                   paddingBottom: "8px",
                 }}
               >
-                Materiales
-              </h3>
+                <h3
+                  style={{
+                    color: "#ffffff",
+                    margin: "0",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                  }}
+                >
+                  Materiales
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "#94a3b8",
+                      fontSize: "13px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Todos
+                  </span>
+                  <ModernToggle
+                    checked={(() => {
+                      const categoriaSeleccionada = categorias.find(
+                        (cat) => categoriasExpandidas[cat.id],
+                      );
+                      if (!categoriaSeleccionada) return false;
+                      const materialesCat =
+                        materiales[categoriaSeleccionada.id] || [];
+                      return materialesCat.every(
+                        (mat) => materialesActivados[mat.id],
+                      );
+                    })()}
+                    onChange={(checked) =>
+                      toggleTodosMaterialesCategoria(checked)
+                    }
+                  />
+                </div>
+              </div>
               {(() => {
                 const categoriaSeleccionada = categorias.find(
                   (cat) => categoriasExpandidas[cat.id],
@@ -1035,9 +1331,9 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                         key={material.id}
                         style={{
                           backgroundColor: "#111827",
-                          border: "1px solid #374151",
+                          border: `1px solid ${materialesActivados[material.id] ? "#059669" : "#374151"}`,
                           borderRadius: "6px",
-                          padding: "16px",
+                          padding: "12px 16px",
                           transition: "all 0.2s",
                         }}
                         onMouseEnter={(e) => {
@@ -1046,70 +1342,44 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.backgroundColor = "#111827";
-                          e.currentTarget.style.borderColor = "#374151";
+                          e.currentTarget.style.borderColor =
+                            materialesActivados[material.id]
+                              ? "#059669"
+                              : "#374151";
                         }}
                       >
                         <div
                           style={{
-                            color: "#ffffff",
-                            fontSize: "15px",
-                            fontWeight: "600",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
                             marginBottom: "8px",
                           }}
                         >
-                          {material.nombre}
-                        </div>
-
-                        <div
-                          style={{
-                            color: "#94a3b8",
-                            fontSize: "13px",
-                            marginBottom: "12px",
-                            lineHeight: "1.4",
-                          }}
-                        >
-                          {material.descripcion}
-                        </div>
-
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: "8px",
-                          }}
-                        >
-                          <div>
-                            <span
-                              style={{
-                                color: "#6b7280",
-                                fontSize: "11px",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              }}
-                            >
-                              Unidad
-                            </span>
+                          <div
+                            style={{
+                              color: "#ffffff",
+                              fontSize: "15px",
+                              fontWeight: "600",
+                            }}
+                          >
+                            {material.nombre}
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "16px",
+                            }}
+                          >
                             <div
                               style={{
-                                color: "#ffffff",
-                                fontSize: "14px",
-                                fontWeight: "500",
+                                color: "#94a3b8",
+                                fontSize: "13px",
                               }}
                             >
                               {material.unidad}
                             </div>
-                          </div>
-                          <div>
-                            <span
-                              style={{
-                                color: "#6b7280",
-                                fontSize: "11px",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              }}
-                            >
-                              Precio Unitario
-                            </span>
                             <div
                               style={{
                                 color: "#10b981",
@@ -1119,7 +1389,23 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                             >
                               ${material.precio || "N/A"}
                             </div>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <ModernToggle
+                                checked={materialesActivados[material.id]}
+                                onChange={() => toggleMaterial(material.id)}
+                              />
+                            </div>
                           </div>
+                        </div>
+
+                        <div
+                          style={{
+                            color: "#94a3b8",
+                            fontSize: "13px",
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          {material.descripcion}
                         </div>
                       </div>
                     ))}
@@ -1288,6 +1574,7 @@ export default function Precarga() {
       <VistaDetalladaRubro
         rubro={rubroSeleccionado}
         onVolver={volverAlListado}
+        rubrosSeleccionados={rubrosSeleccionados}
       />
     );
   }
