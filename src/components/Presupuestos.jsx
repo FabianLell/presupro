@@ -77,23 +77,35 @@ export default function Presupuestos({ perfil, soloLectura }) {
       query = query.eq("is_active", true);
     }
 
+    const userId = await getUserId();
+
     const [p, c, m, s, cat] = await Promise.all([
       query,
       supabase.from("clientes").select("*").order("apellido"),
       supabase
         .from("user_materiales")
-        .select("*, user_categorias(nombre)")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("is_active", true)
         .order("nombre"),
       supabase.from("user_servicios").select("*").order("nombre"),
       supabase.from("user_categorias").select("id, nombre").order("nombre"),
     ]);
-    console.log("Materiales desde Supabase:", m);
-    console.log("Error materiales:", m.error);
+
     if (p.data) setPresupuestos(p.data);
     if (c.data) setClientes(c.data);
-    if (m.data) setMateriales(m.data);
-    if (s.data) setServicios(s.data);
     if (cat.data) setCategorias(cat.data);
+    if (s.data) setServicios(s.data);
+
+    // Agregar información de categorías a los materiales
+    const materialesConCategoria = (m.data || []).map((mat) => ({
+      ...mat,
+      user_categorias: mat.user_categoria_id
+        ? cat.data?.find((c) => c.id === mat.user_categoria_id)
+        : null,
+    }));
+    setMateriales(materialesConCategoria);
+
     setCargando(false);
   }
 
@@ -1799,22 +1811,18 @@ export default function Presupuestos({ perfil, soloLectura }) {
                 onChange={(e) => setMatSel(e.target.value)}
               >
                 <option value="">Seleccioná un material</option>
-                {(() => {
-                  const materialesFiltrados = materiales.filter(
+                {materiales
+                  .filter(
                     (m) =>
                       !categoriaSel || m.user_categoria_id === categoriaSel,
-                  );
-                  console.log("Categoría seleccionada:", categoriaSel);
-                  console.log("Materiales totales:", materiales);
-                  console.log("Materiales filtrados:", materialesFiltrados);
-                  return materialesFiltrados.map((m) => (
+                  )
+                  .map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nombre} - $
                       {parseFloat(m.precio_unitario).toLocaleString("es-AR")} /{" "}
                       {m.unidad}
                     </option>
-                  ));
-                })()}
+                  ))}
               </select>
               <input
                 type="number"

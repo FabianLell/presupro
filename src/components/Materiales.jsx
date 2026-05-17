@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase, getUserId } from "../supabase";
 import { useDirtyForm } from "../hooks/useDirtyForm";
+import { useMobile } from "../hooks/use-mobile";
 
 const UNIDADES = [
   "unidad",
@@ -55,6 +56,97 @@ function IconoEliminar() {
   );
 }
 
+function IconoKebab() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </svg>
+  );
+}
+
+function IconoExpandir() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function IconoContraer() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <polyline points="18 15 12 9 6 15" />
+    </svg>
+  );
+}
+
+function ToggleSwitch({ checked, onChange, label }) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        fontSize: "0.9rem",
+        color: "#888",
+        cursor: "pointer",
+        userSelect: "none",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: "44px",
+          height: "24px",
+          backgroundColor: checked ? "#2563eb" : "#374151",
+          borderRadius: "12px",
+          transition: "background-color 0.2s",
+          cursor: "pointer",
+        }}
+        onClick={() => onChange(!checked)}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: "2px",
+            left: checked ? "22px" : "2px",
+            width: "20px",
+            height: "20px",
+            backgroundColor: "#fff",
+            borderRadius: "50%",
+            transition: "left 0.2s",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+          }}
+        />
+      </div>
+      <span>{label}</span>
+    </label>
+  );
+}
+
 export default function Materiales({ soloLectura }) {
   const [materiales, setMateriales] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -80,6 +172,14 @@ export default function Materiales({ soloLectura }) {
   const [editCategoria, setEditCategoria] = useState(null);
   const [formCategoria, setFormCategoria] = useState({ nombre: "" });
   const [okCategoria, setOkCategoria] = useState("");
+
+  // Mobile-specific states
+  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [kebabMenu, setKebabMenu] = useState(null);
+  const [kebabPosition, setKebabPosition] = useState(null);
+  const [showMobileForm, setShowMobileForm] = useState(false);
+
+  const isMobile = useMobile();
 
   // Hook de protección contra pérdida de datos
   const dirtyForm = useDirtyForm(VACIO, async () => {
@@ -215,6 +315,10 @@ export default function Materiales({ soloLectura }) {
     setEsNuevo(true);
     setError("");
     setOk("");
+
+    if (isMobile) {
+      setShowMobileForm(true);
+    }
   }
 
   function cancelar() {
@@ -223,10 +327,18 @@ export default function Materiales({ soloLectura }) {
       setForm(VACIO);
       setModoEdicion(false);
       setEsNuevo(false);
+
+      if (isMobile) {
+        setShowMobileForm(false);
+      }
     } else {
       const m = materiales.find((x) => x.id === selId);
       if (m) seleccionar(m);
       setModoEdicion(false);
+
+      if (isMobile) {
+        setShowMobileForm(false);
+      }
     }
     setError("");
     setOk("");
@@ -236,7 +348,6 @@ export default function Materiales({ soloLectura }) {
     setError("");
     setOk("");
 
-    // Obtener datos del hook si el componente está vacío
     let currentForm = form;
     if (dirtyForm.currentData && dirtyForm.currentData.nombre) {
       currentForm = {
@@ -281,6 +392,10 @@ export default function Materiales({ soloLectura }) {
       setOk("Material actualizado");
       setModoEdicion(false);
       dirtyForm.markAsClean();
+
+      if (isMobile) {
+        setShowMobileForm(false);
+      }
     } else {
       const { data, error } = await supabase
         .from("user_materiales")
@@ -297,6 +412,10 @@ export default function Materiales({ soloLectura }) {
       setModoEdicion(false);
       setSelId(data.id);
       dirtyForm.markAsClean();
+
+      if (isMobile) {
+        setShowMobileForm(false);
+      }
     }
 
     setForm(VACIO);
@@ -431,6 +550,42 @@ export default function Materiales({ soloLectura }) {
     setCategorias((prev) => prev.filter((c) => c.id !== id));
   }
 
+  // Mobile-specific functions
+  function toggleExpandedRow(materialId) {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(materialId)) {
+      newExpanded.delete(materialId);
+    } else {
+      newExpanded.add(materialId);
+    }
+    setExpandedRows(newExpanded);
+  }
+
+  function handleKebabClick(materialId, e) {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setKebabPosition({ x: rect.left, y: rect.bottom });
+    setKebabMenu(kebabMenu === materialId ? null : materialId);
+  }
+
+  function handleEditMaterial(materialId) {
+    const material = materiales.find((m) => m.id === materialId);
+    if (material) {
+      seleccionar(material);
+      setModoEdicion(true);
+      setShowMobileForm(true);
+    }
+  }
+
+  function handleDeleteMaterial(materialId) {
+    const material = materiales.find((m) => m.id === materialId);
+    if (!material?.is_active) {
+      restaurar(materialId);
+    } else {
+      setConfirmEliminar(materialId);
+    }
+  }
+
   const filtrados = materiales.filter((m) => {
     if (!busqueda) return true;
     const t = busqueda.toLowerCase();
@@ -444,148 +599,447 @@ export default function Materiales({ soloLectura }) {
 
   const formularioVacio = !selId && !esNuevo;
 
-  return (
-    <div className="md-layout">
-      {/* FORMULARIO */}
-      <div className="md-form-area">
-        <div className="md-form-header">
-          <h2 className={formularioVacio ? "" : "activo"}>
-            {esNuevo
-              ? "Nuevo material"
-              : selId
-                ? "Datos del material"
-                : "Seleccioná un material"}
-          </h2>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            {error && <span className="msg-error">{error}</span>}
-            {ok && <span className="msg-ok">{ok}</span>}
-            {!soloLectura && !modoEdicion && (
-              <button className="btn btn-primary" onClick={nuevo}>
-                + Nuevo
-              </button>
-            )}
-            {!soloLectura &&
-              selId &&
-              !esNuevo &&
-              !modoEdicion &&
-              (() => {
-                const material = materiales.find((m) => m.id === selId);
-                const isEliminado = !material?.is_active;
-                return !isEliminado ? (
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setModoEdicion(true)}
-                  >
-                    <IconoEditar /> Editar
-                  </button>
-                ) : null;
-              })()}
-            {!soloLectura &&
-              selId &&
-              !esNuevo &&
-              !modoEdicion &&
-              (() => {
-                const material = materiales.find((m) => m.id === selId);
-                const isEliminado = !material?.is_active;
-                return isEliminado ? (
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => restaurar(selId)}
-                  >
-                    ↺ Restaurar
-                  </button>
-                ) : (
-                  <button
-                    className="btn btn-danger"
-                    onClick={() => setConfirmEliminar(selId)}
-                  >
-                    <IconoEliminar /> Eliminar
-                  </button>
-                );
-              })()}
-            {modoEdicion && (
-              <>
-                <button className="btn btn-primary" onClick={guardar}>
-                  Guardar
-                </button>
-                <button className="btn btn-secondary" onClick={cancelar}>
-                  Cancelar
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+  // Mobile form visibility logic
+  const shouldShowForm = !isMobile || (isMobile && showMobileForm);
 
-        <div className="form-row">
-          <input
-            name="nombre"
-            placeholder="Nombre (ej: Caño 40x20) *"
-            value={form.nombre}
-            onChange={handleChange}
-            readOnly={!modoEdicion}
-          />
-          <select
-            name="unidad"
-            value={form.unidad}
-            onChange={handleChange}
-            disabled={!modoEdicion}
-          >
-            {UNIDADES.map((u) => (
-              <option key={u}>{u}</option>
-            ))}
-          </select>
-        </div>
+  function KebabMenu({
+    materialId,
+    onEdit,
+    onDelete,
+    isVisible,
+    onClose,
+    isEliminado,
+    position,
+  }) {
+    if (!isVisible || !position) return null;
 
-        <div className="form-row" style={{ marginTop: "0.65rem" }}>
-          <div style={{ position: "relative", flex: 1 }}>
-            <select
-              name="user_categoria_id"
-              value={form.user_categoria_id || ""}
-              onChange={handleChange}
-              disabled={!modoEdicion}
-              style={{ width: "100%" }}
-            >
-              <option value="">
-                {cargandoCategorias ? "Cargando..." : "Sin categoría"}
-              </option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-          {!soloLectura && modoEdicion && (
+    return (
+      <div
+        className="modal-overlay"
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.3)",
+          zIndex: 100,
+        }}
+        onClick={onClose}
+      >
+        <div
+          style={{
+            position: "absolute",
+            right: "10px",
+            top: position.y,
+            transform: "translateY(0)",
+            background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
+            border: "1px solid #374151",
+            borderRadius: "8px",
+            padding: "0.5rem",
+            minWidth: "120px",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!isEliminado && (
             <button
-              type="button"
               className="btn btn-secondary"
-              style={{ whiteSpace: "nowrap", padding: "0.6rem 1rem" }}
-              onClick={() => setMostrarModalCategoria(true)}
+              style={{
+                width: "100%",
+                justifyContent: "flex-start",
+                padding: "0.5rem 0.75rem",
+                fontSize: "0.85rem",
+              }}
+              onClick={() => {
+                onEdit(materialId);
+                onClose();
+              }}
             >
-              + Nueva
+              <IconoEditar /> Editar
+            </button>
+          )}
+          {isEliminado ? (
+            <button
+              className="btn btn-primary"
+              style={{
+                width: "100%",
+                justifyContent: "flex-start",
+                padding: "0.5rem 0.75rem",
+                fontSize: "0.85rem",
+              }}
+              onClick={() => {
+                onDelete(materialId);
+                onClose();
+              }}
+            >
+              ↺ Restaurar
+            </button>
+          ) : (
+            <button
+              className="btn btn-danger"
+              style={{
+                width: "100%",
+                justifyContent: "flex-start",
+                padding: "0.5rem 0.75rem",
+                fontSize: "0.85rem",
+              }}
+              onClick={() => {
+                onDelete(materialId);
+                onClose();
+              }}
+            >
+              <IconoEliminar /> Eliminar
             </button>
           )}
         </div>
-
-        <input
-          name="descripcion"
-          placeholder="Descripción"
-          value={form.descripcion}
-          onChange={handleChange}
-          readOnly={!modoEdicion}
-          style={{ marginTop: "0.65rem" }}
-        />
-
-        <input
-          name="precio_unitario"
-          type="number"
-          placeholder="Precio unitario ($) *"
-          value={form.precio_unitario}
-          onChange={handleChange}
-          readOnly={!modoEdicion}
-          style={{ marginTop: "0.65rem" }}
-        />
       </div>
+    );
+  }
+
+  function MobileMaterialRow({ material }) {
+    const isExpanded = expandedRows.has(material.id);
+    const isEliminado = !material.is_active;
+
+    return (
+      <div style={{ marginBottom: "0.5rem" }}>
+        <div
+          className={`mobile-material-item ${selId === material.id ? "seleccionado" : ""} ${isEliminado ? "eliminado" : ""}`}
+          style={{
+            background: "#1e293b",
+            border: "1px solid #334155",
+            borderRadius: "8px",
+            padding: "0.75rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            ...(isEliminado
+              ? { opacity: 0.6, textDecoration: "line-through" }
+              : {}),
+          }}
+          onClick={() => toggleExpandedRow(material.id)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#222";
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#1e293b";
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1rem",
+                fontWeight: "600",
+                color: "#f0f0f0",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                flex: 1,
+                maxWidth: "calc(100% - 120px)",
+                textAlign: "left",
+                paddingLeft: 0,
+                marginLeft: 0,
+              }}
+            >
+              {material.nombre}
+            </div>
+            <div
+              style={{
+                fontSize: "1.1rem",
+                fontWeight: "700",
+                color: "#4ade80",
+                fontFamily: "monospace",
+                margin: "0 0.5rem",
+                whiteSpace: "nowrap",
+              }}
+            >
+              ${parseFloat(material.precio_unitario).toLocaleString("es-AR")}
+            </div>
+            <button
+              className="btn btn-secondary"
+              style={{
+                padding: "0.25rem 0.5rem",
+                fontSize: "0.8rem",
+                minWidth: "auto",
+              }}
+              onClick={(e) => handleKebabClick(material.id, e)}
+            >
+              <IconoKebab />
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "0.5rem",
+              color: "#888",
+            }}
+          >
+            {isExpanded ? <IconoContraer /> : <IconoExpandir />}
+          </div>
+
+          {isExpanded && (
+            <div
+              style={{
+                width: "100%",
+                marginTop: "0.5rem",
+                textAlign: "left",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  color: "#888",
+                  marginBottom: "0.3rem",
+                }}
+              >
+                Unidad: {material.unidad}
+              </div>
+              {material.user_categorias?.nombre && (
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#3b82f6",
+                    marginBottom: "0.3rem",
+                  }}
+                >
+                  Categoría: {material.user_categorias.nombre}
+                </div>
+              )}
+              {material.descripcion && (
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "0.3rem",
+                    wordWrap: "break-word",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {material.descripcion}
+                </div>
+              )}
+              {isEliminado && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    color: "#ff6b6b",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    marginTop: "0.5rem",
+                    padding: "0.25rem",
+                    background: "#2a1a1a",
+                    borderRadius: "4px",
+                  }}
+                >
+                  ELIMINADO
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="md-layout">
+      {/* FORMULARIO - Hidden on mobile unless showMobileForm is true */}
+      {shouldShowForm && (
+        <div
+          className="md-form-area"
+          style={{
+            display: isMobile && !showMobileForm ? "none" : "block",
+            ...(isMobile
+              ? {
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 50,
+                  background: "#1a1a1a",
+                }
+              : {}),
+          }}
+        >
+          <div className="md-form-header">
+            <h2 className={formularioVacio ? "" : "activo"}>
+              {esNuevo
+                ? "Nuevo material"
+                : selId
+                  ? "Datos del material"
+                  : "Seleccioná un material"}
+            </h2>
+            <div
+              style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
+            >
+              {error && <span className="msg-error">{error}</span>}
+              {ok && <span className="msg-ok">{ok}</span>}
+              {!isMobile && !soloLectura && !modoEdicion && (
+                <button className="btn btn-primary" onClick={nuevo}>
+                  + Nuevo
+                </button>
+              )}
+              {!soloLectura &&
+                selId &&
+                !esNuevo &&
+                !modoEdicion &&
+                (() => {
+                  const material = materiales.find((m) => m.id === selId);
+                  const isEliminado = !material?.is_active;
+                  return !isEliminado ? (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => setModoEdicion(true)}
+                    >
+                      <IconoEditar /> Editar
+                    </button>
+                  ) : null;
+                })()}
+              {!soloLectura &&
+                selId &&
+                !esNuevo &&
+                !modoEdicion &&
+                (() => {
+                  const material = materiales.find((m) => m.id === selId);
+                  const isEliminado = !material?.is_active;
+                  return isEliminado ? (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => restaurar(selId)}
+                    >
+                      ↺ Restaurar
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => setConfirmEliminar(selId)}
+                    >
+                      <IconoEliminar /> Eliminar
+                    </button>
+                  );
+                })()}
+              {modoEdicion && (
+                <>
+                  <button className="btn btn-primary" onClick={guardar}>
+                    Guardar
+                  </button>
+                  <button className="btn btn-secondary" onClick={cancelar}>
+                    Cancelar
+                  </button>
+                </>
+              )}
+              {/* Mobile close button */}
+              {isMobile && showMobileForm && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowMobileForm(false)}
+                  style={{ marginLeft: "auto" }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row">
+            <input
+              name="nombre"
+              placeholder="Nombre (ej: Caño 40x20) *"
+              value={form.nombre}
+              onChange={handleChange}
+              readOnly={!modoEdicion}
+            />
+            <select
+              name="unidad"
+              value={form.unidad}
+              onChange={handleChange}
+              disabled={!modoEdicion}
+            >
+              {UNIDADES.map((u) => (
+                <option key={u}>{u}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-row" style={{ marginTop: "0.65rem" }}>
+            <div style={{ position: "relative", flex: 1 }}>
+              <select
+                name="user_categoria_id"
+                value={form.user_categoria_id || ""}
+                onChange={handleChange}
+                disabled={!modoEdicion}
+                style={{ width: "100%" }}
+              >
+                <option value="">
+                  {cargandoCategorias ? "Cargando..." : "Sin categoría"}
+                </option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {!soloLectura && modoEdicion && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ whiteSpace: "nowrap", padding: "0.6rem 1rem" }}
+                onClick={() => setMostrarModalCategoria(true)}
+              >
+                + Nueva
+              </button>
+            )}
+          </div>
+
+          <input
+            name="descripcion"
+            placeholder="Descripción"
+            value={form.descripcion}
+            onChange={handleChange}
+            readOnly={!modoEdicion}
+            style={{ marginTop: "0.65rem" }}
+          />
+
+          <input
+            name="precio_unitario"
+            type="number"
+            placeholder="Precio unitario ($) *"
+            value={form.precio_unitario}
+            onChange={handleChange}
+            readOnly={!modoEdicion}
+            style={{ marginTop: "0.65rem" }}
+          />
+          {modoEdicion && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+                marginTop: "1.5rem",
+              }}
+            >
+              <button className="btn btn-secondary" onClick={cancelar}>
+                Cancelar
+              </button>
+              <button className="btn btn-primary" onClick={guardar}>
+                Guardar
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* BUSCADOR */}
       <div className="md-search-area">
@@ -594,26 +1048,63 @@ export default function Materiales({ soloLectura }) {
             placeholder="Buscar material..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <label
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontSize: "0.9rem",
-              color: "#888",
-              whiteSpace: "nowrap",
+              flex: isMobile ? "1" : "1",
+              height: isMobile ? "44px" : "auto",
+              fontSize: isMobile ? "1rem" : "auto",
             }}
-          >
-            <input
-              type="checkbox"
+          />
+          {/* Mobile: Toggle switch, Desktop: Checkbox */}
+          {isMobile ? (
+            <ToggleSwitch
               checked={mostrarEliminados}
-              onChange={(e) => setMostrarEliminados(e.target.checked)}
+              onChange={setMostrarEliminados}
+              label="Eliminados"
             />
-            Ver Eliminados
-          </label>
-          {!soloLectura && (
+          ) : (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.9rem",
+                color: "#888",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={mostrarEliminados}
+                onChange={(e) => setMostrarEliminados(e.target.checked)}
+              />
+              Ver Eliminados
+            </label>
+          )}
+          {isMobile && !soloLectura && (
+            <button
+              className="btn btn-primary"
+              onClick={nuevo}
+              style={{
+                height: "44px",
+                padding: "0.75rem 1.5rem",
+                minWidth: "120px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: "600",
+                }}
+              >
+                + Nuevo
+              </span>
+            </button>
+          )}
+          {!isMobile && !soloLectura && (
             <button
               className="btn btn-secondary"
               style={{
@@ -719,124 +1210,14 @@ export default function Materiales({ soloLectura }) {
               </table>
             </div>
 
-            {/* Vista Mobile */}
-            <div className="mobile-view">
-              <div className="mobile-materiales-list">
+            {/* Mobile view */}
+            {isMobile && (
+              <div style={{ padding: "0.5rem" }}>
                 {filtrados.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`mobile-material-item ${selId === m.id ? "seleccionado" : ""} ${!m.is_active ? "eliminado" : ""}`}
-                    onClick={() => seleccionar(m)}
-                    style={
-                      !m.is_active
-                        ? {
-                            opacity: 0.6,
-                            textDecoration: "line-through",
-                          }
-                        : {}
-                    }
-                  >
-                    {/* Fila 1: Nombre + Unidad + Precio */}
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        width: "100%",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: "1rem",
-                          fontWeight: "600",
-                          color: "#f0f0f0",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          flex: 1,
-                          maxWidth: "calc(100% - 150px)",
-                          textAlign: "left",
-                          paddingLeft: 0,
-                          marginLeft: 0,
-                        }}
-                      >
-                        {m.nombre}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.85rem",
-                          color: "#888",
-                          margin: "0 1rem",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        por {m.unidad}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "1.1rem",
-                          fontWeight: "700",
-                          color: "#4ade80",
-                          fontFamily: "monospace",
-                          flexShrink: 0,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        ${parseFloat(m.precio_unitario).toLocaleString("es-AR")}
-                      </div>
-                    </div>
-
-                    {/* Fila 2: Categoría y Descripción en una sola celda */}
-                    <div
-                      style={{
-                        width: "100%",
-                        marginTop: "0.3rem",
-                        textAlign: "left",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "0.85rem",
-                          fontWeight: "500",
-                          color: "#3b82f6",
-                          marginRight: "0.5rem",
-                        }}
-                      >
-                        {m.user_categorias?.nombre || "Sin categoría"}:
-                      </span>
-                      {m.descripcion && (
-                        <span
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#666",
-                            fontStyle: "italic",
-                            lineHeight: "1.4",
-                            wordWrap: "break-word",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {m.descripcion}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Estado eliminado */}
-                    {!m.is_active && (
-                      <div
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "#ff6b6b",
-                          fontWeight: "bold",
-                          marginTop: "0.25rem",
-                        }}
-                      >
-                        ELIMINADO
-                      </div>
-                    )}
-                  </div>
+                  <MobileMaterialRow key={m.id} material={m} />
                 ))}
               </div>
-            </div>
+            )}
           </>
         )}
       </div>
@@ -1045,6 +1426,22 @@ export default function Materiales({ soloLectura }) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Kebab Menu */}
+      {kebabMenu && (
+        <KebabMenu
+          materialId={kebabMenu}
+          isVisible={true}
+          onClose={() => {
+            setKebabMenu(null);
+            setKebabPosition(null);
+          }}
+          onEdit={handleEditMaterial}
+          onDelete={handleDeleteMaterial}
+          isEliminado={!materiales.find((m) => m.id === kebabMenu)?.is_active}
+          position={kebabPosition}
+        />
       )}
     </div>
   );

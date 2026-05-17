@@ -111,8 +111,9 @@ function KebabMenu({
   isVisible,
   onClose,
   isEliminado,
+  position,
 }) {
-  if (!isVisible) return null;
+  if (!isVisible || !position) return null;
 
   return (
     <div
@@ -122,9 +123,6 @@ function KebabMenu({
         inset: 0,
         background: "rgba(0, 0, 0, 0.3)",
         zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
       }}
       onClick={onClose}
     >
@@ -132,8 +130,8 @@ function KebabMenu({
         style={{
           position: "absolute",
           right: "10px",
-          top: "50%",
-          transform: "translateY(-50%)",
+          top: position.y,
+          transform: "translateY(0)",
           background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
           border: "1px solid #374151",
           borderRadius: "8px",
@@ -248,6 +246,7 @@ export default function Clientes({ soloLectura }) {
   // Mobile-specific states
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [kebabMenu, setKebabMenu] = useState(null);
+  const [kebabPosition, setKebabPosition] = useState(null);
   const [showMobileForm, setShowMobileForm] = useState(false);
 
   const isMobile = useMobile();
@@ -403,6 +402,8 @@ export default function Clientes({ soloLectura }) {
 
   function handleKebabClick(clienteId, e) {
     e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setKebabPosition({ x: rect.left, y: rect.bottom });
     setKebabMenu(kebabMenu === clienteId ? null : clienteId);
   }
 
@@ -1041,10 +1042,14 @@ export default function Clientes({ soloLectura }) {
         <KebabMenu
           clienteId={kebabMenu}
           isVisible={true}
-          onClose={() => setKebabMenu(null)}
+          onClose={() => {
+            setKebabMenu(null);
+            setKebabPosition(null);
+          }}
           onEdit={handleEditCliente}
           onDelete={handleDeleteCliente}
           isEliminado={!clientes.find((c) => c.id === kebabMenu)?.is_active}
+          position={kebabPosition}
         />
       )}
 
