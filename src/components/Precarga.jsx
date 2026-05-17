@@ -350,11 +350,6 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
             ...todosMaterialesActivados,
           });
         }
-
-        // Seleccionar la primera categoría por defecto
-        if (cats && cats.length > 0) {
-          setCategoriasExpandidas({ [cats[0].id]: true });
-        }
       } catch (error) {
         if (isMounted) {
           console.error("Error al cargar datos del rubro:", error);
@@ -1065,7 +1060,8 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
               display: "grid",
               gridTemplateColumns: "1fr 2fr",
               gap: "20px",
-              height: "calc(100vh - 200px)",
+              height: "calc(100vh - 160px)",
+              maxHeight: "calc(100vh - 160px)",
             }}
           >
             {/* Columna 1: Categorías */}
@@ -1076,6 +1072,7 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
                 borderRadius: "8px",
                 padding: "16px",
                 overflowY: "auto",
+                maxHeight: "100%",
               }}
             >
               <div
@@ -1223,6 +1220,7 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
                 borderRadius: "8px",
                 padding: "16px",
                 overflowY: "auto",
+                maxHeight: "100%",
               }}
             >
               <div

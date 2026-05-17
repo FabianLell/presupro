@@ -563,15 +563,18 @@ export default function Clientes({ soloLectura }) {
       <div style={{ marginBottom: "0.5rem" }}>
         {/* Main row */}
         <div
+          className={`mobile-client-item ${selId === cliente.id ? "seleccionado" : ""} ${isEliminado ? "eliminado" : ""}`}
           style={{
-            background: "#1a1a1a",
-            border: "1px solid #2a2a2a",
+            background: "#1e293b",
+            border: "1px solid #334155",
             borderRadius: "8px",
             padding: "0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
             boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            ...(isEliminado ? { opacity: 0.6 } : {}),
+            ...(isEliminado
+              ? { opacity: 0.6, textDecoration: "line-through" }
+              : {}),
           }}
           onClick={() => toggleExpandedRow(cliente.id)}
           onMouseEnter={(e) => {
@@ -580,50 +583,49 @@ export default function Clientes({ soloLectura }) {
             e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#1a1a1a";
+            e.currentTarget.style.background = "#1e293b";
             e.currentTarget.style.transform = "translateY(0)";
             e.currentTarget.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
           }}
         >
+          {/* Fila 1: Nombre + Apellido + Teléfono + Kebab */}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              width: "100%",
             }}
           >
-            {/* Left side: Name, Lastname, Phone */}
             <div
               style={{
+                fontSize: "1rem",
+                fontWeight: "600",
+                color: "#f0f0f0",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
                 flex: 1,
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
+                maxWidth: "calc(100% - 80px)",
+                textAlign: "left",
+                paddingLeft: 0,
+                marginLeft: 0,
               }}
             >
-              <span
+              {cliente.nombre} {cliente.apellido}
+            </div>
+            {cliente.telefono && (
+              <div
                 style={{
-                  fontWeight: "500",
-                  color: "#f0f0f0",
-                  fontSize: "0.95rem",
+                  fontSize: "0.85rem",
+                  color: "#888",
+                  margin: "0 0.5rem",
+                  whiteSpace: "nowrap",
                 }}
               >
-                {cliente.nombre} {cliente.apellido}
-              </span>
-              {cliente.telefono && (
-                <span
-                  style={{
-                    color: "#888",
-                    fontSize: "0.85rem",
-                    fontWeight: "400",
-                  }}
-                >
-                  {cliente.telefono}
-                </span>
-              )}
-            </div>
-
-            {/* Right side: Kebab menu */}
+                {cliente.telefono}
+              </div>
+            )}
             <button
               className="btn btn-secondary"
               style={{
@@ -648,74 +650,59 @@ export default function Clientes({ soloLectura }) {
           >
             {isExpanded ? <IconoContraer /> : <IconoExpandir />}
           </div>
-        </div>
 
-        {/* Expanded content */}
-        {isExpanded && (
-          <div
-            style={{
-              background: "#1f1f1f",
-              border: "1px solid #2a2a2a",
-              borderTop: "none",
-              borderRadius: "0 0 8px 8px",
-              padding: "0.75rem",
-              marginTop: "-1px",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            }}
-          >
+          {/* Fila 2: Email y DNI si está expandido */}
+          {isExpanded && (
             <div
               style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
+                width: "100%",
+                marginTop: "0.5rem",
+                textAlign: "left",
               }}
             >
+              {cliente.email && (
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "0.3rem",
+                    wordWrap: "break-word",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {cliente.email}
+                </div>
+              )}
               {cliente.dni && (
                 <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#888",
+                  }}
                 >
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>
-                    DNI:
-                  </span>
-                  <span style={{ color: "#f0f0f0", fontSize: "0.9rem" }}>
-                    {cliente.dni}
-                  </span>
+                  DNI: {cliente.dni}
                 </div>
               )}
               {cliente.direccion && (
                 <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#888",
+                    marginTop: "0.3rem",
+                  }}
                 >
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>
-                    Dirección:
-                  </span>
-                  <span style={{ color: "#f0f0f0", fontSize: "0.9rem" }}>
-                    {cliente.direccion}
-                  </span>
+                  {cliente.direccion}
                 </div>
               )}
               {cliente.cuil_cuit && (
                 <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#888",
+                    marginTop: "0.3rem",
+                  }}
                 >
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>
-                    CUIT:
-                  </span>
-                  <span style={{ color: "#f0f0f0", fontSize: "0.9rem" }}>
-                    {cliente.cuil_cuit}
-                  </span>
-                </div>
-              )}
-              {cliente.email && (
-                <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
-                >
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>
-                    Email:
-                  </span>
-                  <span style={{ color: "#f0f0f0", fontSize: "0.9rem" }}>
-                    {cliente.email}
-                  </span>
+                  CUIT: {cliente.cuil_cuit}
                 </div>
               )}
               {isEliminado && (
@@ -735,8 +722,8 @@ export default function Clientes({ soloLectura }) {
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }
@@ -775,7 +762,7 @@ export default function Clientes({ soloLectura }) {
             >
               {error && <span className="msg-error">{error}</span>}
               {ok && <span className="msg-ok">{ok}</span>}
-              {!soloLectura && !modoEdicion && (
+              {!isMobile && !soloLectura && !modoEdicion && (
                 <button className="btn btn-primary" onClick={nuevo}>
                   + Nuevo
                 </button>
@@ -819,16 +806,6 @@ export default function Clientes({ soloLectura }) {
                     </button>
                   );
                 })()}
-              {modoEdicion && (
-                <>
-                  <button className="btn btn-primary" onClick={guardar}>
-                    Guardar
-                  </button>
-                  <button className="btn btn-secondary" onClick={cancelar}>
-                    Cancelar
-                  </button>
-                </>
-              )}
               {/* Mobile close button */}
               {isMobile && showMobileForm && (
                 <button
@@ -898,6 +875,23 @@ export default function Clientes({ soloLectura }) {
             readOnly={!modoEdicion}
             style={{ marginTop: "0.65rem" }}
           />
+          {modoEdicion && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+                marginTop: "1.5rem",
+              }}
+            >
+              <button className="btn btn-secondary" onClick={cancelar}>
+                Cancelar
+              </button>
+              <button className="btn btn-primary" onClick={guardar}>
+                Guardar
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -908,7 +902,11 @@ export default function Clientes({ soloLectura }) {
             placeholder="Buscar cliente..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            style={{ flex: 1 }}
+            style={{
+              flex: isMobile ? "1" : "1",
+              height: isMobile ? "44px" : "auto",
+              fontSize: isMobile ? "1rem" : "auto",
+            }}
           />
           {/* Mobile: Toggle switch, Desktop: Checkbox */}
           {isMobile ? (
@@ -935,6 +933,30 @@ export default function Clientes({ soloLectura }) {
               />
               Ver Eliminados
             </label>
+          )}
+          {isMobile && !soloLectura && (
+            <button
+              className="btn btn-primary"
+              onClick={nuevo}
+              style={{
+                height: "44px",
+                padding: "0.75rem 1.5rem",
+                minWidth: "120px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: "600",
+                }}
+              >
+                + Nuevo
+              </span>
+            </button>
           )}
         </div>
       </div>

@@ -87,6 +87,8 @@ export default function Presupuestos({ perfil, soloLectura }) {
       supabase.from("user_servicios").select("*").order("nombre"),
       supabase.from("user_categorias").select("id, nombre").order("nombre"),
     ]);
+    console.log("Materiales desde Supabase:", m);
+    console.log("Error materiales:", m.error);
     if (p.data) setPresupuestos(p.data);
     if (c.data) setClientes(c.data);
     if (m.data) setMateriales(m.data);
@@ -1787,7 +1789,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
               >
                 <option value="">Todas las categorías</option>
                 {categorias.map((c) => (
-                  <option key={c.id} value={c.nombre}>
+                  <option key={c.id} value={c.id}>
                     {c.nombre}
                   </option>
                 ))}
@@ -1797,18 +1799,22 @@ export default function Presupuestos({ perfil, soloLectura }) {
                 onChange={(e) => setMatSel(e.target.value)}
               >
                 <option value="">Seleccioná un material</option>
-                {materiales
-                  .filter(
+                {(() => {
+                  const materialesFiltrados = materiales.filter(
                     (m) =>
-                      !categoriaSel || m.categorias?.nombre === categoriaSel,
-                  )
-                  .map((m) => (
+                      !categoriaSel || m.user_categoria_id === categoriaSel,
+                  );
+                  console.log("Categoría seleccionada:", categoriaSel);
+                  console.log("Materiales totales:", materiales);
+                  console.log("Materiales filtrados:", materialesFiltrados);
+                  return materialesFiltrados.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nombre} - $
                       {parseFloat(m.precio_unitario).toLocaleString("es-AR")} /{" "}
                       {m.unidad}
                     </option>
-                  ))}
+                  ));
+                })()}
               </select>
               <input
                 type="number"
