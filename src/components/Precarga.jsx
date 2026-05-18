@@ -429,54 +429,54 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
     try {
       const userId = await getUserId();
 
-      console.log("=== DEBUG: Iniciando guardarCambiosMateriales ===");
-      console.log("Categorías:", categorias);
-      console.log("Materiales:", materiales);
-      console.log("Materiales activados:", materialesActivados);
-
       // Obtener user_categorias existentes
       const { data: userCategorias } = await supabase
         .from("user_categorias")
-        .select("id, system_categoria_id")
+        .select("id, system_categoria_id, is_active")
         .eq("user_id", userId);
-
-      console.log("User categorías existentes:", userCategorias);
 
       const systemCatToUserCat = {};
       userCategorias?.forEach((uc) => {
-        systemCatToUserCat[uc.system_categoria_id] = uc.id;
+        systemCatToUserCat[uc.system_categoria_id] = uc;
       });
 
-      // Crear user_categorias para todas las categorías del rubro
+      // Crear/actualizar user_categorias según el estado de los toggles
       for (const cat of categorias) {
-        if (!systemCatToUserCat[cat.id]) {
-          console.log(`Creando user_categoria para ${cat.nombre} (${cat.id})`);
+        const existing = systemCatToUserCat[cat.id];
+        const catActiva = !!categoriasActivadas[cat.id];
+
+        if (!existing) {
           const { data: newCat, error: catError } = await supabase
             .from("user_categorias")
             .insert({
               user_id: userId,
               system_categoria_id: cat.id,
               nombre: cat.nombre,
+              is_active: catActiva,
             })
             .select()
             .single();
 
-          if (catError) {
-            console.error("Error creando user_categoria:", catError);
-          } else {
-            console.log("User categoría creada:", newCat);
-            systemCatToUserCat[cat.id] = newCat.id;
+          if (!catError && newCat) {
+            systemCatToUserCat[cat.id] = {
+              id: newCat.id,
+              system_categoria_id: cat.id,
+              is_active: catActiva,
+            };
           }
-        } else {
-          console.log(
-            `User categoría ya existe para ${cat.nombre}: ${systemCatToUserCat[cat.id]}`,
-          );
+        } else if (existing.is_active !== catActiva) {
+          await supabase
+            .from("user_categorias")
+            .update({ is_active: catActiva })
+            .eq("id", existing.id);
+          existing.is_active = catActiva;
         }
       }
 
       // Obtener todos los user_materiales existentes del usuario para este rubro
-      const userCategoriaIds = Object.values(systemCatToUserCat);
-      console.log("User categoria IDs:", userCategoriaIds);
+      const userCategoriaIds = Object.values(systemCatToUserCat).map(
+        (uc) => uc.id,
+      );
 
       const { data: userMateriales } = await supabase
         .from("user_materiales")
@@ -485,60 +485,38 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
         .in("user_categoria_id", userCategoriaIds)
         .not("system_material_id", "is", null);
 
-      console.log("User materiales existentes:", userMateriales);
-
       const existingMaterials = {};
       userMateriales?.forEach((um) => {
         existingMaterials[um.system_material_id] = um;
       });
 
-      // Procesar todas las categorías del rubro (no solo las que tienen materiales activados)
+      // Procesar materiales según su estado de toggle
       for (const cat of categorias) {
-        const userCatId = systemCatToUserCat[cat.id];
-        if (!userCatId) {
-          console.log(`No user_cat_id para categoría ${cat.nombre}, saltando`);
-          continue;
-        }
+        const userCat = systemCatToUserCat[cat.id];
+        if (!userCat) continue;
 
         const materialesCat = materiales[cat.id] || [];
         for (const mat of materialesCat) {
-          const activado = materialesActivados[mat.id];
+          const activado = !!materialesActivados[mat.id];
           const existing = existingMaterials[mat.id];
 
-          console.log(
-            `Material ${mat.nombre}: activado=${activado}, existing=${!!existing}`,
-          );
-
           if (activado && !existing) {
-            // Crear nuevo user_material
-            console.log(`Creando user_material para ${mat.nombre}`);
-            const { error: matError } = await supabase
-              .from("user_materiales")
-              .insert({
-                user_id: userId,
-                user_categoria_id: userCatId,
-                system_material_id: mat.id,
-                nombre: mat.nombre,
-                descripcion: mat.descripcion,
-                unidad: mat.unidad,
-                precio_unitario: mat.precio,
-                is_active: true,
-              });
-            if (matError) {
-              console.error("Error creando user_material:", matError);
-            } else {
-              console.log(`User_material creado para ${mat.nombre}`);
-            }
+            await supabase.from("user_materiales").insert({
+              user_id: userId,
+              user_categoria_id: userCat.id,
+              system_material_id: mat.id,
+              nombre: mat.nombre,
+              descripcion: mat.descripcion,
+              unidad: mat.unidad,
+              precio_unitario: mat.precio,
+              is_active: true,
+            });
           } else if (activado && existing && !existing.is_active) {
-            // Reactivar material (baja lógica revertida)
-            console.log(`Reactivando user_material ${mat.nombre}`);
             await supabase
               .from("user_materiales")
               .update({ is_active: true })
               .eq("id", existing.id);
           } else if (!activado && existing && existing.is_active) {
-            // Desactivar material (baja lógica)
-            console.log(`Desactivando user_material ${mat.nombre}`);
             await supabase
               .from("user_materiales")
               .update({ is_active: false })
@@ -1474,13 +1452,6 @@ export default function Precarga() {
     try {
       const userId = await getUserId();
 
-      // Cargar perfil
-      const { data: perfilData } = await supabase
-        .from("perfil")
-        .select("rubros_seleccionados")
-        .eq("user_id", userId)
-        .maybeSingle();
-
       // Cargar rubros
       const { data: rubrosData } = await supabase
         .from("system_rubros")
@@ -1489,8 +1460,31 @@ export default function Precarga() {
 
       setRubros(rubrosData || []);
 
-      // Establecer rubros seleccionados actuales
-      const seleccionados = perfilData?.rubros_seleccionados || [];
+      // Obtener user_categorias activas del usuario
+      const { data: userCats } = await supabase
+        .from("user_categorias")
+        .select("system_categoria_id")
+        .eq("user_id", userId)
+        .eq("is_active", true);
+
+      // Obtener los system_categoria_id únicos
+      const systemCatIds = [
+        ...new Set((userCats || []).map((uc) => uc.system_categoria_id)),
+      ];
+
+      // Obtener los system_rubro_id correspondientes
+      let seleccionados = [];
+      if (systemCatIds.length > 0) {
+        const { data: systemCats } = await supabase
+          .from("system_categorias")
+          .select("system_rubro_id")
+          .in("id", systemCatIds);
+
+        seleccionados = [
+          ...new Set((systemCats || []).map((sc) => sc.system_rubro_id)),
+        ];
+      }
+
       setRubrosSeleccionados(seleccionados);
       setRubrosSeleccionadosIniciales([...seleccionados]);
     } catch (error) {
@@ -1513,13 +1507,150 @@ export default function Precarga() {
     try {
       const userId = await getUserId();
 
-      // Actualizar perfil con nuevos rubros seleccionados
-      const { error } = await supabase
-        .from("perfil")
-        .update({ rubros_seleccionados: rubrosSeleccionados })
+      // Obtener todos los system_rubros con sus system_categorias
+      const { data: allSystemCats } = await supabase
+        .from("system_categorias")
+        .select("id, system_rubro_id, nombre, icono");
+
+      // Obtener user_categorias existentes del usuario
+      const { data: existingUserCats } = await supabase
+        .from("user_categorias")
+        .select("id, system_categoria_id, is_active")
         .eq("user_id", userId);
 
-      if (error) throw error;
+      const userCatBySystemId = {};
+      (existingUserCats || []).forEach((uc) => {
+        userCatBySystemId[uc.system_categoria_id] = uc;
+      });
+
+      // Determinar qué system_categorias pertenecen a rubros activados vs desactivados
+      const catsRubrosActivados = (allSystemCats || []).filter((sc) =>
+        rubrosSeleccionados.includes(sc.system_rubro_id),
+      );
+      const catsRubrosDesactivados = (allSystemCats || []).filter(
+        (sc) => !rubrosSeleccionados.includes(sc.system_rubro_id),
+      );
+
+      // --- Rubros ACTIVADOS: crear/activar user_categorias y user_materiales ---
+      const newUserCatIds = [];
+      for (const sysCat of catsRubrosActivados) {
+        const existing = userCatBySystemId[sysCat.id];
+        if (existing) {
+          if (!existing.is_active) {
+            await supabase
+              .from("user_categorias")
+              .update({ is_active: true })
+              .eq("id", existing.id);
+          }
+          newUserCatIds.push({ userCatId: existing.id, systemCatId: sysCat.id });
+        } else {
+          const { data: newCat } = await supabase
+            .from("user_categorias")
+            .insert({
+              user_id: userId,
+              system_categoria_id: sysCat.id,
+              nombre: sysCat.nombre,
+              is_active: true,
+            })
+            .select()
+            .single();
+
+          if (newCat) {
+            newUserCatIds.push({
+              userCatId: newCat.id,
+              systemCatId: sysCat.id,
+            });
+          }
+        }
+      }
+
+      // Obtener system_materiales para las categorías activadas
+      const activatedSystemCatIds = catsRubrosActivados.map((sc) => sc.id);
+      let systemMaterials = [];
+      if (activatedSystemCatIds.length > 0) {
+        const { data: mats } = await supabase
+          .from("system_materiales")
+          .select(
+            "id, system_categoria_id, nombre, descripcion, unidad, precio_unitario",
+          )
+          .in("system_categoria_id", activatedSystemCatIds);
+        systemMaterials = mats || [];
+      }
+
+      // Obtener user_materiales existentes para las user_categorias activadas
+      const activatedUserCatIds = newUserCatIds.map((x) => x.userCatId);
+      let existingUserMats = [];
+      if (activatedUserCatIds.length > 0) {
+        const { data: uMats } = await supabase
+          .from("user_materiales")
+          .select("id, system_material_id, is_active, user_categoria_id")
+          .eq("user_id", userId)
+          .in("user_categoria_id", activatedUserCatIds)
+          .not("system_material_id", "is", null);
+        existingUserMats = uMats || [];
+      }
+
+      const existingMatBySystemId = {};
+      existingUserMats.forEach((um) => {
+        existingMatBySystemId[um.system_material_id] = um;
+      });
+
+      // Mapear system_categoria_id → user_categoria_id
+      const sysCatToUserCat = {};
+      newUserCatIds.forEach((x) => {
+        sysCatToUserCat[x.systemCatId] = x.userCatId;
+      });
+
+      // Crear/activar user_materiales para rubros activados
+      for (const sysMat of systemMaterials) {
+        const userCatId = sysCatToUserCat[sysMat.system_categoria_id];
+        if (!userCatId) continue;
+
+        const existing = existingMatBySystemId[sysMat.id];
+        if (existing) {
+          if (!existing.is_active) {
+            await supabase
+              .from("user_materiales")
+              .update({ is_active: true })
+              .eq("id", existing.id);
+          }
+        } else {
+          await supabase.from("user_materiales").insert({
+            user_id: userId,
+            user_categoria_id: userCatId,
+            system_material_id: sysMat.id,
+            nombre: sysMat.nombre,
+            descripcion: sysMat.descripcion,
+            unidad: sysMat.unidad,
+            precio_unitario: sysMat.precio_unitario,
+            is_active: true,
+          });
+        }
+      }
+
+      // --- Rubros DESACTIVADOS: desactivar user_categorias y user_materiales ---
+      // Desactivar user_categorias correspondientes
+      const userCatIdsToDeactivate = [];
+      for (const sysCat of catsRubrosDesactivados) {
+        const existing = userCatBySystemId[sysCat.id];
+        if (existing && existing.is_active) {
+          await supabase
+            .from("user_categorias")
+            .update({ is_active: false })
+            .eq("id", existing.id);
+          userCatIdsToDeactivate.push(existing.id);
+        }
+      }
+
+      // Desactivar user_materiales de esas categorías
+      if (userCatIdsToDeactivate.length > 0) {
+        await supabase
+          .from("user_materiales")
+          .update({ is_active: false })
+          .eq("user_id", userId)
+          .in("user_categoria_id", userCatIdsToDeactivate)
+          .eq("is_active", true);
+      }
 
       // Actualizar estado inicial
       setRubrosSeleccionadosIniciales([...rubrosSeleccionados]);
