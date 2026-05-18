@@ -885,60 +885,6 @@ export default function Materiales({ soloLectura }) {
             >
               {error && <span className="msg-error">{error}</span>}
               {ok && <span className="msg-ok">{ok}</span>}
-              {!isMobile && !soloLectura && !modoEdicion && (
-                <button className="btn btn-primary" onClick={nuevo}>
-                  + Nuevo
-                </button>
-              )}
-              {!soloLectura &&
-                selId &&
-                !esNuevo &&
-                !modoEdicion &&
-                (() => {
-                  const material = materiales.find((m) => m.id === selId);
-                  const isEliminado = !material?.is_active;
-                  return !isEliminado ? (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setModoEdicion(true)}
-                    >
-                      <IconoEditar /> Editar
-                    </button>
-                  ) : null;
-                })()}
-              {!soloLectura &&
-                selId &&
-                !esNuevo &&
-                !modoEdicion &&
-                (() => {
-                  const material = materiales.find((m) => m.id === selId);
-                  const isEliminado = !material?.is_active;
-                  return isEliminado ? (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => restaurar(selId)}
-                    >
-                      ↺ Restaurar
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => setConfirmEliminar(selId)}
-                    >
-                      <IconoEliminar /> Eliminar
-                    </button>
-                  );
-                })()}
-              {modoEdicion && (
-                <>
-                  <button className="btn btn-primary" onClick={guardar}>
-                    Guardar
-                  </button>
-                  <button className="btn btn-secondary" onClick={cancelar}>
-                    Cancelar
-                  </button>
-                </>
-              )}
               {/* Mobile close button */}
               {isMobile && showMobileForm && (
                 <button
@@ -959,27 +905,22 @@ export default function Materiales({ soloLectura }) {
               value={form.nombre}
               onChange={handleChange}
               readOnly={!modoEdicion}
+              style={{ flex: 1 }}
             />
-            <select
-              name="unidad"
-              value={form.unidad}
-              onChange={handleChange}
-              disabled={!modoEdicion}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                flex: 1,
+              }}
             >
-              {UNIDADES.map((u) => (
-                <option key={u}>{u}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-row" style={{ marginTop: "0.65rem" }}>
-            <div style={{ position: "relative", flex: 1 }}>
               <select
                 name="user_categoria_id"
                 value={form.user_categoria_id || ""}
                 onChange={handleChange}
                 disabled={!modoEdicion}
-                style={{ width: "100%" }}
+                style={{ flex: 1 }}
               >
                 <option value="">
                   {cargandoCategorias ? "Cargando..." : "Sin categoría"}
@@ -990,17 +931,42 @@ export default function Materiales({ soloLectura }) {
                   </option>
                 ))}
               </select>
+              {!soloLectura && modoEdicion && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{
+                    whiteSpace: "nowrap",
+                    padding: "0.4rem 0.6rem",
+                    fontSize: "0.8rem",
+                  }}
+                  onClick={() => setMostrarModalCategoria(true)}
+                >
+                  + Nueva
+                </button>
+              )}
             </div>
-            {!soloLectura && modoEdicion && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ whiteSpace: "nowrap", padding: "0.6rem 1rem" }}
-                onClick={() => setMostrarModalCategoria(true)}
-              >
-                + Nueva
-              </button>
-            )}
+          </div>
+
+          <div className="form-row" style={{ marginTop: "0.65rem" }}>
+            <select
+              name="unidad"
+              value={form.unidad}
+              onChange={handleChange}
+              disabled={!modoEdicion}
+            >
+              {UNIDADES.map((u) => (
+                <option key={u}>{u}</option>
+              ))}
+            </select>
+            <input
+              name="precio_unitario"
+              type="number"
+              placeholder="Precio unitario ($) *"
+              value={form.precio_unitario}
+              onChange={handleChange}
+              readOnly={!modoEdicion}
+            />
           </div>
 
           <input
@@ -1011,33 +977,71 @@ export default function Materiales({ soloLectura }) {
             readOnly={!modoEdicion}
             style={{ marginTop: "0.65rem" }}
           />
-
-          <input
-            name="precio_unitario"
-            type="number"
-            placeholder="Precio unitario ($) *"
-            value={form.precio_unitario}
-            onChange={handleChange}
-            readOnly={!modoEdicion}
-            style={{ marginTop: "0.65rem" }}
-          />
-          {modoEdicion && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "0.75rem",
-                marginTop: "1.5rem",
-              }}
-            >
-              <button className="btn btn-secondary" onClick={cancelar}>
-                Cancelar
-              </button>
-              <button className="btn btn-primary" onClick={guardar}>
-                Guardar
-              </button>
-            </div>
-          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.75rem",
+              marginTop: "1.5rem",
+            }}
+          >
+            {!modoEdicion && (
+              <>
+                {!isMobile && !soloLectura && (
+                  <button className="btn btn-primary" onClick={nuevo}>
+                    + Nuevo
+                  </button>
+                )}
+                {!soloLectura &&
+                  selId &&
+                  !esNuevo &&
+                  (() => {
+                    const material = materiales.find((m) => m.id === selId);
+                    const isEliminado = !material?.is_active;
+                    return !isEliminado ? (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setModoEdicion(true)}
+                      >
+                        <IconoEditar /> Editar
+                      </button>
+                    ) : null;
+                  })()}
+                {!soloLectura &&
+                  selId &&
+                  !esNuevo &&
+                  (() => {
+                    const material = materiales.find((m) => m.id === selId);
+                    const isEliminado = !material?.is_active;
+                    return isEliminado ? (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => restaurar(selId)}
+                      >
+                        ↺ Restaurar
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => setConfirmEliminar(selId)}
+                      >
+                        <IconoEliminar /> Eliminar
+                      </button>
+                    );
+                  })()}
+              </>
+            )}
+            {modoEdicion && (
+              <>
+                <button className="btn btn-secondary" onClick={cancelar}>
+                  Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={guardar}>
+                  Guardar
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 

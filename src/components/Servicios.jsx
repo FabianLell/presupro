@@ -693,60 +693,6 @@ export default function Servicios({ soloLectura }) {
             >
               {error && <span className="msg-error">{error}</span>}
               {ok && <span className="msg-ok">{ok}</span>}
-              {!isMobile && !soloLectura && !modoEdicion && (
-                <button className="btn btn-primary" onClick={nuevo}>
-                  + Nuevo
-                </button>
-              )}
-              {!soloLectura &&
-                selId &&
-                !modoEdicion &&
-                !esNuevo &&
-                (() => {
-                  const servicio = servicios.find((s) => s.id === selId);
-                  const isEliminado = !servicio?.is_active;
-                  return !isEliminado ? (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setModoEdicion(true)}
-                    >
-                      <IconoEditar /> Editar
-                    </button>
-                  ) : null;
-                })()}
-              {!soloLectura &&
-                selId &&
-                !esNuevo &&
-                !modoEdicion &&
-                (() => {
-                  const servicio = servicios.find((s) => s.id === selId);
-                  const isEliminado = !servicio?.is_active;
-                  return isEliminado ? (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => restaurar(selId)}
-                    >
-                      ↺ Restaurar
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => setConfirmEliminar(selId)}
-                    >
-                      <IconoEliminar /> Eliminar
-                    </button>
-                  );
-                })()}
-              {modoEdicion && (
-                <>
-                  <button className="btn btn-primary" onClick={guardar}>
-                    Guardar
-                  </button>
-                  <button className="btn btn-secondary" onClick={cancelar}>
-                    Cancelar
-                  </button>
-                </>
-              )}
               {/* Mobile close button */}
               {isMobile && showMobileForm && (
                 <button
@@ -786,23 +732,71 @@ export default function Servicios({ soloLectura }) {
             readOnly={!modoEdicion}
             style={{ marginTop: "0.65rem" }}
           />
-          {modoEdicion && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "0.75rem",
-                marginTop: "1.5rem",
-              }}
-            >
-              <button className="btn btn-secondary" onClick={cancelar}>
-                Cancelar
-              </button>
-              <button className="btn btn-primary" onClick={guardar}>
-                Guardar
-              </button>
-            </div>
-          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.75rem",
+              marginTop: "1.5rem",
+            }}
+          >
+            {!modoEdicion && (
+              <>
+                {!isMobile && !soloLectura && (
+                  <button className="btn btn-primary" onClick={nuevo}>
+                    + Nuevo
+                  </button>
+                )}
+                {!soloLectura &&
+                  selId &&
+                  !esNuevo &&
+                  (() => {
+                    const servicio = servicios.find((s) => s.id === selId);
+                    const isEliminado = !servicio?.is_active;
+                    return !isEliminado ? (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setModoEdicion(true)}
+                      >
+                        <IconoEditar /> Editar
+                      </button>
+                    ) : null;
+                  })()}
+                {!soloLectura &&
+                  selId &&
+                  !esNuevo &&
+                  (() => {
+                    const servicio = servicios.find((s) => s.id === selId);
+                    const isEliminado = !servicio?.is_active;
+                    return isEliminado ? (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => restaurar(selId)}
+                      >
+                        ↺ Restaurar
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => setConfirmEliminar(selId)}
+                      >
+                        <IconoEliminar /> Eliminar
+                      </button>
+                    );
+                  })()}
+              </>
+            )}
+            {modoEdicion && (
+              <>
+                <button className="btn btn-secondary" onClick={cancelar}>
+                  Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={guardar}>
+                  Guardar
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
