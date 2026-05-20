@@ -13,7 +13,6 @@ import Clientes from "./components/Clientes";
 import Presupuestos from "./components/Presupuestos";
 import Admin from "./components/Admin";
 import Perfil from "./components/Perfil";
-import Onboarding from "./components/Onboarding";
 import Precarga from "./components/Precarga";
 
 // Hook para detectar mobile
@@ -61,7 +60,6 @@ export default function App() {
   const [resetMode, setResetMode] = useState(false);
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
   const [perfil, setPerfil] = useState(null);
-  const [onboarding, setOnboarding] = useState(false);
   const [estadoCuenta, setEstadoCuenta] = useState({
     soloLectura: false,
     mensaje: "",
@@ -247,7 +245,6 @@ export default function App() {
               nombre_negocio: nombreNegocio,
               email_contacto: session.user.email || null,
               estado: "prueba",
-              rubros_seleccionados: null,
               fecha_inicio_prueba: new Date().toISOString(),
             },
           ],
@@ -271,13 +268,6 @@ export default function App() {
     }
 
     setPerfil(perfilData || null);
-
-    if (!perfilData || perfilData.rubros_seleccionados === null) {
-      setOnboarding(true);
-      return;
-    }
-
-    setOnboarding(false);
 
     const { count } = await supabase
       .from("presupuestos")
@@ -314,15 +304,6 @@ export default function App() {
     );
 
   if (resetMode) return <ResetPassword onDone={() => setResetMode(false)} />;
-  if (session && onboarding)
-    return (
-      <Onboarding
-        onComplete={() => {
-          setOnboarding(false);
-          cargarPerfil();
-        }}
-      />
-    );
   if (confirmacionEmail) {
     return <ConfirmarEmail />;
   }

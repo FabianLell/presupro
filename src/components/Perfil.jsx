@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase, getUserId } from "../supabase";
-import Onboarding from "./Onboarding";
 import { useDirtyForm } from "../hooks/useDirtyForm";
 
 const VACIO = {
