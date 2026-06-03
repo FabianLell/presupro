@@ -19,8 +19,8 @@ export default function ForgotPassword({ onBack, onEmailSent }) {
     if (error) {
       setError("No se pudo enviar el email de recuperación");
     } else {
-      setOk("Te enviamos un email con instrucciones para cambiar tu contraseña");
-      setTimeout(() => onEmailSent(), 2000);
+      setOk("Te enviamos un código al email. Ingresalo para cambiar tu contraseña");
+      setTimeout(() => onEmailSent(email.trim()), 2000);
     }
     setCargando(false);
   }
