@@ -56,6 +56,9 @@ export default function VerifyRecoveryCode({ email, onBack, onSuccess }) {
     }
 
     setOk("Contraseña actualizada correctamente");
+
+    // Logout y redirigir a login
+    await supabase.auth.signOut();
     setTimeout(() => onSuccess(), 1500);
   }
 
