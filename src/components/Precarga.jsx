@@ -50,7 +50,55 @@ function useGridConfig() {
   return gridConfig;
 }
 
-// Toggle ultra-compacto estilo SaaS Premium
+// 3-State Toggle (INACTIVE, PARTIAL, COMPLETE)
+function ThreeStateToggle({ state, onChange, disabled = false }) {
+  const stateConfig = {
+    0: { bg: "#475569", knobX: "1px", label: "Inactivo" },
+    1: { bg: "#3b82f6", knobX: "6px", label: "Parcial" },
+    2: { bg: "#10b981", knobX: "12px", label: "Completo" },
+  };
+
+  const config = stateConfig[state] || stateConfig[0];
+
+  return (
+    <button
+      type="button"
+      onClick={() => !disabled && onChange(state === 2 ? 0 : state + 1)}
+      disabled={disabled}
+      style={{
+        position: "relative",
+        width: "26px",
+        height: "14px",
+        backgroundColor: config.bg,
+        border: "none",
+        borderRadius: "7px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        outline: "none",
+        boxShadow:
+          state > 0
+            ? `0 0 0 1px rgba(${state === 1 ? "59, 130, 246" : "16, 185, 129"}, 0.2)`
+            : "inset 0 1px 1px rgba(0, 0, 0, 0.1)",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: "1px",
+          left: config.knobX,
+          width: "12px",
+          height: "12px",
+          backgroundColor: "#ffffff",
+          borderRadius: "50%",
+          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+        }}
+      />
+    </button>
+  );
+}
+
+// Binary Toggle (for other uses)
 function ModernToggle({ checked, onChange, disabled = false }) {
   return (
     <button
@@ -91,8 +139,34 @@ function ModernToggle({ checked, onChange, disabled = false }) {
 }
 
 // Tarjeta simple sin expansión ni botones extra
-function RubroCard({ rubro, activo, onToggle, onClick }) {
+function RubroCard({
+  rubro,
+  toggleState,
+  activeMaterials,
+  totalMaterials,
+  onToggle,
+  onClick,
+}) {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Calculate legend text based on state
+  const getLegendText = () => {
+    if (toggleState === 0) {
+      return "Inactivo (0 materiales)";
+    } else if (toggleState === 1) {
+      return `${activeMaterials} de ${totalMaterials} materiales`;
+    } else {
+      return `Completo (${totalMaterials}/${totalMaterials})`;
+    }
+  };
+
+  const getLegendColor = () => {
+    if (toggleState === 0) return "#64748b";
+    if (toggleState === 1) return "#3b82f6";
+    return "#10b981";
+  };
+
+  const isActive = toggleState > 0;
 
   return (
     <div
@@ -101,8 +175,8 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        backgroundColor: activo ? "#1f2937" : "#111827",
-        border: `1px solid ${activo ? "#059669" : "#374151"}`,
+        backgroundColor: isActive ? "#1f2937" : "#111827",
+        border: `1px solid ${isActive ? "#059669" : "#374151"}`,
         borderRadius: "8px",
         padding: "12px",
         cursor: "pointer",
@@ -111,7 +185,7 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
           ? "0 4px 6px rgba(0, 0, 0, 0.1)"
           : "0 2px 4px rgba(0, 0, 0, 0.05)",
         transform: isHovered ? "translateY(-2px)" : "translateY(0)",
-        opacity: activo ? 1 : 0.8,
+        opacity: isActive ? 1 : 0.8,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -121,7 +195,7 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
             fontSize: "20px",
             width: "32px",
             height: "32px",
-            backgroundColor: activo
+            backgroundColor: isActive
               ? "rgba(5, 150, 105, 0.2)"
               : "rgba(55, 65, 81, 0.3)",
             borderRadius: "6px",
@@ -134,17 +208,27 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
           {rubro.icono}
         </div>
 
-        {/* Nombre */}
+        {/* Nombre y Legend */}
         <div
           style={{
-            color: activo ? "#f3f4f6" : "#9ca3af",
-            fontSize: "14px",
-            fontWeight: "500",
+            color: isActive ? "#f3f4f6" : "#9ca3af",
             flex: 1,
             textAlign: "left",
           }}
         >
-          {rubro.nombre}
+          <div style={{ fontSize: "14px", fontWeight: "500" }}>
+            {rubro.nombre}
+          </div>
+          <div
+            style={{
+              fontSize: "11px",
+              color: getLegendColor(),
+              marginTop: "2px",
+              fontWeight: toggleState === 2 ? "500" : "400",
+            }}
+          >
+            {getLegendText()}
+          </div>
         </div>
 
         {/* Toggle */}
@@ -152,7 +236,11 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
           onClick={(e) => e.stopPropagation()}
           style={{ flexShrink: 0, marginRight: "8px" }}
         >
-          <ModernToggle checked={activo} onChange={onToggle} disabled={false} />
+          <ThreeStateToggle
+            state={toggleState}
+            onChange={onToggle}
+            disabled={false}
+          />
         </div>
 
         {/* Icono de configuración */}
@@ -215,7 +303,12 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
 }
 
 // Vista detallada del rubro con tree-view
-function VistaDetalladaRubro({ rubro, onVolver }) {
+function VistaDetalladaRubro({
+  rubro,
+  onVolver,
+  onUpdateRubroState,
+  rubroState,
+}) {
   const [categorias, setCategorias] = useState([]);
   const [materiales, setMateriales] = useState({});
   const [categoriasExpandidas, setCategoriasExpandidas] = useState({});
@@ -232,9 +325,11 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
       if (!isMounted) return;
 
       try {
+        setCargando(true);
+
         // Cargar categorías del rubro
         const { data: cats } = await supabase
-          .from("rubro_categorias")
+          .from("system_categorias")
           .select(
             `
             id,
@@ -242,11 +337,11 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             icono
           `,
           )
-          .eq("rubro_id", rubro.id);
+          .eq("system_rubro_id", rubro.id);
 
         // Cargar materiales del rubro
         const { data: mats } = await supabase
-          .from("rubro_materiales")
+          .from("system_materiales")
           .select(
             `
             id,
@@ -254,17 +349,17 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             descripcion,
             unidad,
             precio_unitario,
-            rubro_categoria_id
+            system_categoria_id
           `,
           )
-          .eq("rubro_id", rubro.id);
+          .in("system_categoria_id", cats?.map((c) => c.id) || []);
 
         if (!isMounted) return;
 
         // Organizar datos por categorías
         const materialesPorCategoria = {};
         mats?.forEach((mat) => {
-          const catId = mat.rubro_categoria_id;
+          const catId = mat.system_categoria_id;
           if (!materialesPorCategoria[catId]) {
             materialesPorCategoria[catId] = [];
           }
@@ -279,6 +374,78 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
 
         setCategorias(cats || []);
         setMateriales(materialesPorCategoria);
+
+        // Cargar user_materiales del usuario para este rubro
+        const userId = await getUserId();
+        const { data: userCategorias } = await supabase
+          .from("user_categorias")
+          .select("id, system_categoria_id")
+          .eq("user_id", userId);
+
+        const userCategoriaIds = userCategorias?.map((uc) => uc.id) || [];
+
+        const { data: userMateriales } = await supabase
+          .from("user_materiales")
+          .select("system_material_id, user_categoria_id, is_active")
+          .eq("user_id", userId)
+          .in("user_categoria_id", userCategoriaIds)
+          .not("system_material_id", "is", null);
+
+        if (!isMounted) return;
+
+        // Mapear system_material_id a system_categoria_id
+        const materialToCategoria = {};
+        userCategorias?.forEach((uc) => {
+          const matsInCat =
+            userMateriales?.filter((um) => um.user_categoria_id === uc.id) ||
+            [];
+          matsInCat.forEach((um) => {
+            if (um.system_material_id) {
+              materialToCategoria[um.system_material_id] =
+                uc.system_categoria_id;
+            }
+          });
+        });
+
+        // Marcar materiales activados según user_materiales
+        const materialesActivadosState = {};
+        const categoriasActivadasState = {};
+
+        userMateriales?.forEach((um) => {
+          if (um.system_material_id && um.is_active) {
+            materialesActivadosState[um.system_material_id] = true;
+            const catId = materialToCategoria[um.system_material_id];
+            if (catId) {
+              categoriasActivadasState[catId] = true;
+            }
+          }
+        });
+
+        // Apply rubro state if it's INACTIVE or COMPLETE
+        if (rubroState === 0) {
+          // INACTIVE: nothing is active
+          setMaterialesActivados({});
+          setCategoriasActivadas({});
+        } else if (rubroState === 2) {
+          // COMPLETE: all are active
+          const todasCategoriasActivadas = {};
+          const todosMaterialesActivados = {};
+
+          cats.forEach((cat) => {
+            todasCategoriasActivadas[cat.id] = true;
+            const materialesCat = materialesPorCategoria[cat.id] || [];
+            materialesCat.forEach((mat) => {
+              todosMaterialesActivados[mat.id] = true;
+            });
+          });
+
+          setCategoriasActivadas(todasCategoriasActivadas);
+          setMaterialesActivados(todosMaterialesActivados);
+        } else {
+          // PARTIAL: use what's in DB
+          setMaterialesActivados(materialesActivadosState);
+          setCategoriasActivadas(categoriasActivadasState);
+        }
       } catch (error) {
         if (isMounted) {
           console.error("Error al cargar datos del rubro:", error);
@@ -298,6 +465,12 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
       isMounted = false;
     };
   }, [rubro]);
+
+  // Update parent in real-time when materials/categories change
+  useEffect(() => {
+    const nuevoEstado = calcularNuevoEstadoRubro();
+    onUpdateRubroState(rubro.id, nuevoEstado);
+  }, [materialesActivados, categoriasActivadas]);
 
   function toggleTodasCategorias(activar) {
     const nuevasActivaciones = {};
@@ -338,12 +511,76 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
     }));
   }
 
+  function toggleTodosMaterialesCategoria(activar) {
+    const categoriaSeleccionada = categorias.find(
+      (cat) => categoriasExpandidas[cat.id],
+    );
+    if (!categoriaSeleccionada) return;
+
+    const materialesCat = materiales[categoriaSeleccionada.id] || [];
+    const nuevasActivacionesMateriales = { ...materialesActivados };
+
+    materialesCat.forEach((mat) => {
+      nuevasActivacionesMateriales[mat.id] = activar;
+    });
+
+    setMaterialesActivados(nuevasActivacionesMateriales);
+  }
+
+  function calcularNuevoEstadoRubro() {
+    // Count total materials
+    let totalMateriales = 0;
+    let materialesActivos = 0;
+
+    categorias.forEach((cat) => {
+      const materialesCat = materiales[cat.id] || [];
+      totalMateriales += materialesCat.length;
+      materialesCat.forEach((mat) => {
+        if (materialesActivados[mat.id]) {
+          materialesActivos += 1;
+        }
+      });
+    });
+
+    if (totalMateriales === 0) return 0;
+    if (materialesActivos === 0) return 0;
+    if (materialesActivos === totalMateriales) return 2;
+    return 1;
+  }
+
   function seleccionarCategoriaParaConfigurar(cat) {
     setCategoriaSeleccionada(cat);
   }
 
   function volverACategorias() {
     setCategoriaSeleccionada(null);
+  }
+
+  function volverAlListado() {
+    // Just return to list - changes will be saved when user clicks "Guardar Cambios" in the main view
+    onVolver();
+  }
+
+  function calcularNuevoEstadoRubro() {
+    // Count total materials in UI
+    const materialesEnUI = Object.values(materiales).flat();
+    const totalMateriales = materialesEnUI.length;
+
+    // Count active materials in UI
+    const materialesActivos = materialesEnUI.filter(
+      (mat) => materialesActivados[mat.id],
+    ).length;
+
+    if (totalMateriales === 0) return 0;
+    if (materialesActivos === 0) return 0;
+    if (materialesActivos === totalMateriales) return 2;
+    return 1;
+  }
+
+  function volverConCambios() {
+    const nuevoEstado = calcularNuevoEstadoRubro();
+    onUpdateRubroState(nuevoEstado);
+    onVolver();
   }
 
   if (cargando) {
@@ -378,11 +615,33 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
           justifyContent: "space-between",
         }}
       >
+        <button
+          onClick={volverAlListado}
+          style={{
+            backgroundColor: "#374151",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 16px",
+            fontSize: "14px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = "#4b5563";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = "#374151";
+          }}
+        >
+          ← Volver al Listado
+        </button>
+
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div
             style={{
               fontSize: "24px",
-              backgroundColor: "#10b981",
+              backgroundColor: "rgba(5, 150, 105, 0.2)",
               width: "40px",
               height: "40px",
               borderRadius: "8px",
@@ -415,57 +674,6 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             </p>
           </div>
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {/* Switch maestro "todas" */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              backgroundColor: "#1f2937",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: "1px solid #374151",
-            }}
-          >
-            <span
-              style={{
-                color: "#94a3b8",
-                fontSize: "13px",
-                fontWeight: "500",
-              }}
-            >
-              Todas
-            </span>
-            <ModernToggle
-              checked={categorias.every((cat) => categoriasActivadas[cat.id])}
-              onChange={(checked) => toggleTodasCategorias(checked)}
-            />
-          </div>
-
-          <button
-            onClick={onVolver}
-            style={{
-              backgroundColor: "#374151",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "6px",
-              padding: "8px 16px",
-              fontSize: "14px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = "#4b5563";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = "#374151";
-            }}
-          >
-            ← Volver al Listado
-          </button>
-        </div>
       </div>
 
       {/* Contenido del tree-view */}
@@ -482,7 +690,6 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             No hay categorías configuradas para este rubro
           </div>
         ) : isMobile ? (
-          // Vista mobile: diseño actual de lista vertical
           <div>
             {categorias.map((cat) => {
               const expandida = categoriasExpandidas[cat.id];
@@ -731,7 +938,7 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                   <div
                     style={{
                       fontSize: "20px",
-                      backgroundColor: "#10b981",
+                      backgroundColor: "rgba(5, 150, 105, 0.2)",
                       width: "36px",
                       height: "36px",
                       borderRadius: "6px",
@@ -837,13 +1044,13 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
             )}
           </div>
         ) : (
-          // Vista PC: 2 columnas (categorías a la izquierda, materiales a la derecha)
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 2fr",
               gap: "20px",
-              height: "calc(100vh - 200px)",
+              height: "calc(100vh - 160px)",
+              maxHeight: "calc(100vh - 160px)",
             }}
           >
             {/* Columna 1: Categorías */}
@@ -854,20 +1061,53 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                 borderRadius: "8px",
                 padding: "16px",
                 overflowY: "auto",
+                maxHeight: "100%",
               }}
             >
-              <h3
+              <div
                 style={{
-                  color: "#ffffff",
-                  margin: "0 0 16px 0",
-                  fontSize: "16px",
-                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "16px",
                   borderBottom: "1px solid #374151",
                   paddingBottom: "8px",
                 }}
               >
-                Categorías
-              </h3>
+                <h3
+                  style={{
+                    color: "#ffffff",
+                    margin: "0",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                  }}
+                >
+                  Categorías
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "#94a3b8",
+                      fontSize: "13px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Todas
+                  </span>
+                  <ModernToggle
+                    checked={categorias.every(
+                      (cat) => categoriasActivadas[cat.id],
+                    )}
+                    onChange={(checked) => toggleTodasCategorias(checked)}
+                  />
+                </div>
+              </div>
               {categorias.map((cat) => {
                 const materialesCat = materiales[cat.id] || [];
                 const seleccionada = categoriasExpandidas[cat.id];
@@ -908,7 +1148,7 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                         fontSize: "16px",
                         backgroundColor: activada
                           ? "rgba(5, 150, 105, 0.2)"
-                          : "#10b981",
+                          : "rgba(55, 65, 81, 0.3)",
                         width: "28px",
                         height: "28px",
                         borderRadius: "4px",
@@ -969,20 +1209,63 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                 borderRadius: "8px",
                 padding: "16px",
                 overflowY: "auto",
+                maxHeight: "100%",
               }}
             >
-              <h3
+              <div
                 style={{
-                  color: "#ffffff",
-                  margin: "0 0 16px 0",
-                  fontSize: "16px",
-                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "16px",
                   borderBottom: "1px solid #374151",
                   paddingBottom: "8px",
                 }}
               >
-                Materiales
-              </h3>
+                <h3
+                  style={{
+                    color: "#ffffff",
+                    margin: "0",
+                    fontSize: "16px",
+                    fontWeight: "600",
+                  }}
+                >
+                  Materiales
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "#94a3b8",
+                      fontSize: "13px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Todos
+                  </span>
+                  <ModernToggle
+                    checked={(() => {
+                      const categoriaSeleccionada = categorias.find(
+                        (cat) => categoriasExpandidas[cat.id],
+                      );
+                      if (!categoriaSeleccionada) return false;
+                      const materialesCat =
+                        materiales[categoriaSeleccionada.id] || [];
+                      return materialesCat.every(
+                        (mat) => materialesActivados[mat.id],
+                      );
+                    })()}
+                    onChange={(checked) =>
+                      toggleTodosMaterialesCategoria(checked)
+                    }
+                  />
+                </div>
+              </div>
               {(() => {
                 const categoriaSeleccionada = categorias.find(
                   (cat) => categoriasExpandidas[cat.id],
@@ -1035,9 +1318,9 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                         key={material.id}
                         style={{
                           backgroundColor: "#111827",
-                          border: "1px solid #374151",
+                          border: `1px solid ${materialesActivados[material.id] ? "#059669" : "#374151"}`,
                           borderRadius: "6px",
-                          padding: "16px",
+                          padding: "12px 16px",
                           transition: "all 0.2s",
                         }}
                         onMouseEnter={(e) => {
@@ -1046,70 +1329,44 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.backgroundColor = "#111827";
-                          e.currentTarget.style.borderColor = "#374151";
+                          e.currentTarget.style.borderColor =
+                            materialesActivados[material.id]
+                              ? "#059669"
+                              : "#374151";
                         }}
                       >
                         <div
                           style={{
-                            color: "#ffffff",
-                            fontSize: "15px",
-                            fontWeight: "600",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
                             marginBottom: "8px",
                           }}
                         >
-                          {material.nombre}
-                        </div>
-
-                        <div
-                          style={{
-                            color: "#94a3b8",
-                            fontSize: "13px",
-                            marginBottom: "12px",
-                            lineHeight: "1.4",
-                          }}
-                        >
-                          {material.descripcion}
-                        </div>
-
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: "8px",
-                          }}
-                        >
-                          <div>
-                            <span
-                              style={{
-                                color: "#6b7280",
-                                fontSize: "11px",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              }}
-                            >
-                              Unidad
-                            </span>
+                          <div
+                            style={{
+                              color: "#ffffff",
+                              fontSize: "15px",
+                              fontWeight: "600",
+                            }}
+                          >
+                            {material.nombre}
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "16px",
+                            }}
+                          >
                             <div
                               style={{
-                                color: "#ffffff",
-                                fontSize: "14px",
-                                fontWeight: "500",
+                                color: "#94a3b8",
+                                fontSize: "13px",
                               }}
                             >
                               {material.unidad}
                             </div>
-                          </div>
-                          <div>
-                            <span
-                              style={{
-                                color: "#6b7280",
-                                fontSize: "11px",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              }}
-                            >
-                              Precio Unitario
-                            </span>
                             <div
                               style={{
                                 color: "#10b981",
@@ -1119,7 +1376,23 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
                             >
                               ${material.precio || "N/A"}
                             </div>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <ModernToggle
+                                checked={materialesActivados[material.id]}
+                                onChange={() => toggleMaterial(material.id)}
+                              />
+                            </div>
                           </div>
+                        </div>
+
+                        <div
+                          style={{
+                            color: "#94a3b8",
+                            fontSize: "13px",
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          {material.descripcion}
                         </div>
                       </div>
                     ))}
@@ -1136,9 +1409,10 @@ function VistaDetalladaRubro({ rubro, onVolver }) {
 
 export default function Precarga() {
   const [rubros, setRubros] = useState([]);
-  const [rubrosSeleccionados, setRubrosSeleccionados] = useState([]);
-  const [rubrosSeleccionadosIniciales, setRubrosSeleccionadosIniciales] =
-    useState([]);
+  const [rubroStates, setRubroStates] = useState({});
+  const [rubroMaterialCounts, setRubroMaterialCounts] = useState({});
+  const [rubroActiveMaterials, setRubroActiveMaterials] = useState({});
+  const [rubroStatesIniciales, setRubroStatesIniciales] = useState({});
   const [rubroSeleccionado, setRubroSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -1151,25 +1425,33 @@ export default function Precarga() {
     cargarDatos();
   }, []);
 
-  // Función para comparar arrays de UUIDs sin importar orden
-  function arraysIguales(arr1, arr2) {
-    if (arr1.length !== arr2.length) return false;
-    const set1 = new Set(arr1);
-    const set2 = new Set(arr2);
-    if (set1.size !== set2.size) return false;
-    for (const item of set1) {
-      if (!set2.has(item)) return false;
-    }
-    return true;
-  }
+  // Recalculate active materials when rubro states change
+  useEffect(() => {
+    if (rubros.length === 0 || Object.keys(rubroMaterialCounts).length === 0)
+      return;
 
-  // Verificar si hay cambios pendientes
-  const hayCambiosPendientes = !arraysIguales(
-    rubrosSeleccionados,
-    rubrosSeleccionadosIniciales,
-  );
+    const activeMatsPerRubro = {};
+    rubros.forEach((rubro) => {
+      const state = rubroStates[rubro.id] || 0;
+      const totalMats = rubroMaterialCounts[rubro.id] || 0;
 
-  // Protección de navegación al salir de la sección Precarga
+      if (state === 0) {
+        activeMatsPerRubro[rubro.id] = 0;
+      } else if (state === 2) {
+        activeMatsPerRubro[rubro.id] = totalMats;
+      } else {
+        // For PARTIAL state, keep current value (will be recalculated if needed)
+        activeMatsPerRubro[rubro.id] = rubroActiveMaterials[rubro.id] || 0;
+      }
+    });
+    setRubroActiveMaterials(activeMatsPerRubro);
+  }, [rubroStates]);
+
+  // Check for pending changes
+  const hayCambiosPendientes =
+    JSON.stringify(rubroStates) !== JSON.stringify(rubroStatesIniciales);
+
+  // Protect navigation on unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hayCambiosPendientes) {
@@ -1185,30 +1467,122 @@ export default function Precarga() {
     };
   }, [hayCambiosPendientes]);
 
+  // Register with DirtyForm protection system
+  useEffect(() => {
+    window.currentDirtyForm = {
+      isDirty: hayCambiosPendientes,
+      onSave: guardarCambios,
+    };
+
+    return () => {
+      window.currentDirtyForm = null;
+    };
+  }, [hayCambiosPendientes]);
+
   async function cargarDatos() {
     setCargando(true);
     try {
       const userId = await getUserId();
 
-      // Cargar perfil
-      const { data: perfilData } = await supabase
-        .from("perfil")
-        .select("rubros_seleccionados")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      // Cargar rubros
+      // Load rubros
       const { data: rubrosData } = await supabase
-        .from("rubros")
+        .from("system_rubros")
         .select("*")
         .order("nombre");
 
       setRubros(rubrosData || []);
 
-      // Establecer rubros seleccionados actuales
-      const seleccionados = perfilData?.rubros_seleccionados || [];
-      setRubrosSeleccionados(seleccionados);
-      setRubrosSeleccionadosIniciales([...seleccionados]);
+      // Load all system_categorias
+      const { data: allSystemCats } = await supabase
+        .from("system_categorias")
+        .select("id, system_rubro_id");
+
+      // Calculate total materials per rubro
+      const rubroIds = (rubrosData || []).map((r) => r.id);
+      const catsPerRubro = {};
+      (allSystemCats || []).forEach((cat) => {
+        if (!catsPerRubro[cat.system_rubro_id]) {
+          catsPerRubro[cat.system_rubro_id] = [];
+        }
+        catsPerRubro[cat.system_rubro_id].push(cat.id);
+      });
+
+      const { data: allSystemMats } = await supabase
+        .from("system_materiales")
+        .select("id, system_categoria_id");
+
+      const totalMatsPerRubro = {};
+      rubroIds.forEach((rubroId) => {
+        const catIds = catsPerRubro[rubroId] || [];
+        totalMatsPerRubro[rubroId] = (allSystemMats || []).filter((m) =>
+          catIds.includes(m.system_categoria_id),
+        ).length;
+      });
+
+      // Get user_categorias
+      const { data: userCats } = await supabase
+        .from("user_categorias")
+        .select("id, system_categoria_id, is_active")
+        .eq("user_id", userId);
+
+      // Get user_materiales (FIXED: need user_categoria_id to map correctly)
+      const { data: userMats } = await supabase
+        .from("user_materiales")
+        .select("user_categoria_id, system_material_id, is_active")
+        .eq("user_id", userId);
+
+      // Calculate active materials per rubro
+      const statePerRubro = {};
+
+      rubroIds.forEach((rubroId) => {
+        const catIds = catsPerRubro[rubroId] || [];
+        const totalMaterials = totalMatsPerRubro[rubroId] || 0;
+
+        // Count active user_materiales in categories of this rubro
+        const activeMaterials = (userMats || []).filter((um) => {
+          if (!um.is_active) return false;
+
+          // Find the system_categoria_id for this user_material
+          const userCat = (userCats || []).find(
+            (uc) => uc.id === um.user_categoria_id,
+          );
+
+          // Include only if this user_material's category belongs to this rubro
+          return userCat && catIds.includes(userCat.system_categoria_id);
+        }).length;
+
+        // Calculate state: 0=INACTIVE, 1=PARTIAL, 2=COMPLETE
+        let state = 0;
+        if (totalMaterials > 0) {
+          if (activeMaterials === 0) {
+            state = 0; // INACTIVE
+          } else if (activeMaterials === totalMaterials) {
+            state = 2; // COMPLETE
+          } else {
+            state = 1; // PARTIAL
+          }
+        }
+        statePerRubro[rubroId] = state;
+      });
+
+      setRubroMaterialCounts(totalMatsPerRubro);
+      setRubroStates(statePerRubro);
+      setRubroStatesIniciales({ ...statePerRubro });
+
+      // Calculate and store active materials per rubro
+      const activeMatsPerRubro = {};
+      rubroIds.forEach((rubroId) => {
+        const catIds = catsPerRubro[rubroId] || [];
+        const activeMaterials = (userMats || []).filter((um) => {
+          if (!um.is_active) return false;
+          const userCat = (userCats || []).find(
+            (uc) => uc.id === um.user_categoria_id,
+          );
+          return userCat && catIds.includes(userCat.system_categoria_id);
+        }).length;
+        activeMatsPerRubro[rubroId] = activeMaterials;
+      });
+      setRubroActiveMaterials(activeMatsPerRubro);
     } catch (error) {
       console.error("Error al cargar datos:", error);
     } finally {
@@ -1216,12 +1590,11 @@ export default function Precarga() {
     }
   }
 
-  function toggleRubro(rubroId) {
-    const nuevosSeleccionados = rubrosSeleccionados.includes(rubroId)
-      ? rubrosSeleccionados.filter((id) => id !== rubroId)
-      : [...rubrosSeleccionados, rubroId];
-
-    setRubrosSeleccionados(nuevosSeleccionados);
+  function toggleRubroState(rubroId) {
+    setRubroStates((prev) => ({
+      ...prev,
+      [rubroId]: (prev[rubroId] + 1) % 3,
+    }));
   }
 
   async function guardarCambios() {
@@ -1229,26 +1602,142 @@ export default function Precarga() {
     try {
       const userId = await getUserId();
 
-      // Actualizar perfil con nuevos rubros seleccionados
-      const { error } = await supabase
-        .from("perfil")
-        .update({ rubros_seleccionados: rubrosSeleccionados })
+      // Get all system_categorias
+      const { data: allSystemCats } = await supabase
+        .from("system_categorias")
+        .select("id, system_rubro_id, nombre, icono");
+
+      // Get existing user_categorias
+      const { data: existingUserCats } = await supabase
+        .from("user_categorias")
+        .select("id, system_categoria_id, is_active")
         .eq("user_id", userId);
 
-      if (error) throw error;
+      const userCatBySystemId = {};
+      (existingUserCats || []).forEach((uc) => {
+        userCatBySystemId[uc.system_categoria_id] = uc;
+      });
 
-      // Actualizar estado inicial
-      setRubrosSeleccionadosIniciales([...rubrosSeleccionados]);
+      // Get all system_materiales
+      const { data: allSystemMats } = await supabase
+        .from("system_materiales")
+        .select(
+          "id, system_categoria_id, nombre, descripcion, unidad, precio_unitario",
+        );
 
-      // Mostrar feedback de sincronización
+      // For each rubro, apply state changes
+      for (const [rubroId, state] of Object.entries(rubroStates)) {
+        const catsInRubro = (allSystemCats || []).filter(
+          (sc) => sc.system_rubro_id === rubroId,
+        );
+
+        // If INACTIVE (state 0): deactivate all categories and materials
+        if (state === 0) {
+          for (const cat of catsInRubro) {
+            const existing = userCatBySystemId[cat.id];
+            if (existing && existing.is_active) {
+              await supabase
+                .from("user_categorias")
+                .update({ is_active: false })
+                .eq("id", existing.id);
+            }
+          }
+          const userCatIds = catsInRubro
+            .map((c) => userCatBySystemId[c.id]?.id)
+            .filter(Boolean);
+          if (userCatIds.length > 0) {
+            await supabase
+              .from("user_materiales")
+              .update({ is_active: false })
+              .eq("user_id", userId)
+              .in("user_categoria_id", userCatIds);
+          }
+        }
+        // If COMPLETE (state 2): activate all categories and materials
+        else if (state === 2) {
+          const userCatIds = [];
+          for (const cat of catsInRubro) {
+            let existing = userCatBySystemId[cat.id];
+            if (!existing) {
+              const { data: newCat } = await supabase
+                .from("user_categorias")
+                .insert({
+                  user_id: userId,
+                  system_categoria_id: cat.id,
+                  nombre: cat.nombre,
+                  is_active: true,
+                })
+                .select()
+                .single();
+              if (newCat) {
+                existing = newCat;
+                userCatBySystemId[cat.id] = existing;
+              }
+            } else if (!existing.is_active) {
+              await supabase
+                .from("user_categorias")
+                .update({ is_active: true })
+                .eq("id", existing.id);
+              existing.is_active = true;
+            }
+            if (existing) userCatIds.push(existing.id);
+          }
+
+          const matsInRubro = (allSystemMats || []).filter((m) =>
+            catsInRubro.some((c) => c.id === m.system_categoria_id),
+          );
+
+          const { data: existingUserMats } = await supabase
+            .from("user_materiales")
+            .select("id, system_material_id, is_active")
+            .eq("user_id", userId)
+            .in("user_categoria_id", userCatIds);
+
+          const existingMatMap = {};
+          (existingUserMats || []).forEach((um) => {
+            existingMatMap[um.system_material_id] = um;
+          });
+
+          const catIdToUserCatId = {};
+          for (const cat of catsInRubro) {
+            const uc = userCatBySystemId[cat.id];
+            if (uc) catIdToUserCatId[cat.id] = uc.id;
+          }
+
+          for (const mat of matsInRubro) {
+            const userCatId = catIdToUserCatId[mat.system_categoria_id];
+            if (!userCatId) continue;
+
+            const existing = existingMatMap[mat.id];
+            if (existing) {
+              if (!existing.is_active) {
+                await supabase
+                  .from("user_materiales")
+                  .update({ is_active: true })
+                  .eq("id", existing.id);
+              }
+            } else {
+              await supabase.from("user_materiales").insert({
+                user_id: userId,
+                user_categoria_id: userCatId,
+                system_material_id: mat.id,
+                nombre: mat.nombre,
+                descripcion: mat.descripcion,
+                unidad: mat.unidad,
+                precio_unitario: mat.precio_unitario,
+                is_active: true,
+              });
+            }
+          }
+        }
+      }
+
+      setRubroStatesIniciales({ ...rubroStates });
       setSincronizando(true);
       setTimeout(() => setSincronizando(false), 2000);
-
-      // Recargar datos para sincronizar
-      await cargarDatos();
     } catch (error) {
       console.error("Error al guardar cambios:", error);
-      alert("Error al guardar los cambios");
+      alert("Error al aplicar los cambios");
     } finally {
       setGuardando(false);
     }
@@ -1260,8 +1749,17 @@ export default function Precarga() {
       accionPendiente();
       setAccionPendiente(null);
     }
-    // Restaurar estado inicial
-    setRubrosSeleccionados([...rubrosSeleccionadosIniciales]);
+    setRubroStates({ ...rubroStatesIniciales });
+  }
+
+  function guardarYSalir() {
+    setMostrarConfirmacion(false);
+    guardarCambios().then(() => {
+      if (accionPendiente) {
+        accionPendiente();
+        setAccionPendiente(null);
+      }
+    });
   }
 
   function cancelarSalida() {
@@ -1270,34 +1768,54 @@ export default function Precarga() {
   }
 
   function seleccionarRubro(rubro) {
-    // No preguntar al entrar a la vista detallada, es solo visualización de la Fuente Maestra
     setRubroSeleccionado(rubro);
   }
 
-  function volverAlListado() {
+  function cerrarVistaDetallada() {
     setRubroSeleccionado(null);
   }
 
-  const rubrosActivos = rubros.filter((r) =>
-    rubrosSeleccionados.includes(r.id),
-  );
+  function volverAlListadoConEstado(rubroId, nuevoEstado, materialesActivos) {
+    setRubroStates((prev) => ({
+      ...prev,
+      [rubroId]: nuevoEstado,
+    }));
+    if (materialesActivos !== undefined) {
+      setRubroActiveMaterials((prev) => ({
+        ...prev,
+        [rubroId]: materialesActivos,
+      }));
+    }
+    setRubroSeleccionado(null);
+  }
 
-  // Si hay un rubro seleccionado, mostrar vista detallada
+  function actualizarEstadoRubroEnTiempoReal(rubroId, nuevoEstado) {
+    setRubroStates((prev) => ({
+      ...prev,
+      [rubroId]: nuevoEstado,
+    }));
+  }
+
+  const rubrosActivos = rubros.filter((r) => rubroStates[r.id] > 0);
+
+  // Show detailed view if a rubro is selected
   if (rubroSeleccionado) {
     return (
       <VistaDetalladaRubro
         rubro={rubroSeleccionado}
-        onVolver={volverAlListado}
+        onVolver={cerrarVistaDetallada}
+        onUpdateRubroState={actualizarEstadoRubroEnTiempoReal}
+        rubroState={rubroStates[rubroSeleccionado.id] || 0}
       />
     );
   }
 
-  // Vista principal de listado
+  // Main list view
   return (
     <div
       style={{ backgroundColor: "#0f172a", height: "100vh", overflowY: "auto" }}
     >
-      {/* Banner de estado superior con diseño delgado */}
+      {/* Top status banner */}
       <div
         style={{
           background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
@@ -1336,7 +1854,7 @@ export default function Precarga() {
             </div>
           </div>
 
-          {/* Botón de guardar siempre visible */}
+          {/* Save button always visible */}
           <button
             onClick={guardarCambios}
             disabled={guardando || !hayCambiosPendientes}
@@ -1384,7 +1902,7 @@ export default function Precarga() {
         </div>
       </div>
 
-      {/* Contenido principal con grid responsivo y scroll */}
+      {/* Main content with responsive grid */}
       <div
         style={{
           padding: "16px 24px 32px 24px",
@@ -1460,13 +1978,17 @@ export default function Precarga() {
                 }}
               >
                 {rubros.map((rubro) => {
-                  const activo = rubrosSeleccionados.includes(rubro.id);
+                  const state = rubroStates[rubro.id] || 0;
+                  const totalMats = rubroMaterialCounts[rubro.id] || 0;
+                  const activeMats = rubroActiveMaterials[rubro.id] || 0;
                   return (
                     <RubroCard
                       key={rubro.id}
                       rubro={rubro}
-                      activo={activo}
-                      onToggle={() => toggleRubro(rubro.id)}
+                      toggleState={state}
+                      activeMaterials={activeMats}
+                      totalMaterials={totalMats}
+                      onToggle={() => toggleRubroState(rubro.id)}
                       onClick={() => seleccionarRubro(rubro)}
                     />
                   );
@@ -1476,7 +1998,7 @@ export default function Precarga() {
           </div>
         )}
 
-        {/* Modal de confirmación para salir sin guardar */}
+        {/* Confirmation modal */}
         {mostrarConfirmacion && (
           <div
             style={{
@@ -1569,7 +2091,47 @@ export default function Precarga() {
                     e.target.style.backgroundColor = "#dc2626";
                   }}
                 >
-                  Salir sin guardar
+                  Descartar
+                </button>
+                <button
+                  onClick={guardarYSalir}
+                  disabled={guardando}
+                  style={{
+                    background: guardando
+                      ? "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)"
+                      : "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: guardando ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    boxShadow: guardando
+                      ? "none"
+                      : "0 1px 3px rgba(59, 130, 246, 0.2)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!guardando) {
+                      e.target.style.background =
+                        "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)";
+                      e.target.style.transform = "translateY(-1px)";
+                      e.target.style.boxShadow =
+                        "0 2px 4px rgba(59, 130, 246, 0.3)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!guardando) {
+                      e.target.style.background =
+                        "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)";
+                      e.target.style.transform = "translateY(0)";
+                      e.target.style.boxShadow =
+                        "0 1px 3px rgba(59, 130, 246, 0.2)";
+                    }
+                  }}
+                >
+                  {guardando ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </div>

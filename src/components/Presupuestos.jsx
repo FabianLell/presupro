@@ -74,24 +74,38 @@ export default function Presupuestos({ perfil, soloLectura }) {
       .order("created_at", { ascending: false });
 
     if (!verEliminados) {
-      query = query.is("deleted_at", null);
+      query = query.eq("is_active", true);
     }
+
+    const userId = await getUserId();
 
     const [p, c, m, s, cat] = await Promise.all([
       query,
       supabase.from("clientes").select("*").order("apellido"),
       supabase
-        .from("materiales")
-        .select("*, categorias(nombre)")
+        .from("user_materiales")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("is_active", true)
         .order("nombre"),
-      supabase.from("servicios").select("*").order("nombre"),
-      supabase.from("categorias").select("id, nombre").order("nombre"),
+      supabase.from("user_servicios").select("*").order("nombre"),
+      supabase.from("user_categorias").select("id, nombre").order("nombre"),
     ]);
+
     if (p.data) setPresupuestos(p.data);
     if (c.data) setClientes(c.data);
-    if (m.data) setMateriales(m.data);
-    if (s.data) setServicios(s.data);
     if (cat.data) setCategorias(cat.data);
+    if (s.data) setServicios(s.data);
+
+    // Agregar información de categorías a los materiales
+    const materialesConCategoria = (m.data || []).map((mat) => ({
+      ...mat,
+      user_categorias: mat.user_categoria_id
+        ? cat.data?.find((c) => c.id === mat.user_categoria_id)
+        : null,
+    }));
+    setMateriales(materialesConCategoria);
+
     setCargando(false);
   }
 
@@ -99,11 +113,11 @@ export default function Presupuestos({ perfil, soloLectura }) {
     const [pm, ps] = await Promise.all([
       supabase
         .from("presupuesto_materiales")
-        .select(`*, materiales(nombre, unidad)`)
+        .select(`*, user_materiales(nombre, unidad)`)
         .eq("presupuesto_id", id),
       supabase
         .from("presupuesto_servicios")
-        .select(`*, servicios(nombre)`)
+        .select(`*, user_servicios(nombre)`)
         .eq("presupuesto_id", id),
     ]);
     const p = presupuestos.find((x) => x.id === id);
@@ -143,11 +157,11 @@ export default function Presupuestos({ perfil, soloLectura }) {
     const [pm, ps] = await Promise.all([
       supabase
         .from("presupuesto_materiales")
-        .select(`*, materiales(nombre, unidad, precio_unitario)`)
+        .select(`*, user_materiales(nombre, unidad, precio_unitario)`)
         .eq("presupuesto_id", p.id),
       supabase
         .from("presupuesto_servicios")
-        .select(`*, servicios(nombre)`)
+        .select(`*, user_servicios(nombre)`)
         .eq("presupuesto_id", p.id),
     ]);
     const presupuestoForm = {
@@ -158,15 +172,15 @@ export default function Presupuestos({ perfil, soloLectura }) {
     };
     const newItemsMat = (pm.data || []).map((i) => ({
       material_id: i.material_id,
-      nombre: i.materiales?.nombre,
-      unidad: i.materiales?.unidad,
+      nombre: i.user_materiales?.nombre,
+      unidad: i.user_materiales?.unidad,
       cantidad: i.cantidad,
       precio_unitario: i.precio_unitario,
       subtotal: i.subtotal,
     }));
     const newItemsSer = (ps.data || []).map((i) => ({
       servicio_id: i.servicio_id,
-      nombre: i.servicios?.nombre,
+      nombre: i.user_servicios?.nombre,
       precio: i.precio,
       descripcion: i.descripcion || "",
     }));
@@ -473,7 +487,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
   async function eliminarPresupuesto(id) {
     await supabase
       .from("presupuestos")
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ is_active: false })
       .eq("id", id);
     setConfirmEliminar(null);
     volverAlListado();
@@ -483,12 +497,12 @@ export default function Presupuestos({ perfil, soloLectura }) {
   async function restaurarPresupuesto(id) {
     await supabase
       .from("presupuestos")
-      .update({ deleted_at: null })
+      .update({ is_active: true })
       .eq("id", id);
 
     // Actualizar el presupuesto actual localmente
     if (presupuestoActual && presupuestoActual.id === id) {
-      setPresupuestoActual((prev) => ({ ...prev, deleted_at: null }));
+      setPresupuestoActual((prev) => ({ ...prev, is_active: true }));
     }
 
     cargarTodo();
@@ -689,7 +703,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
             <button className="btn btn-secondary" onClick={volverAlListado}>
               {"←"} Volver
             </button>
-            {p.deleted_at ? (
+            {!p.is_active ? (
               <button
                 className="btn btn-success"
                 onClick={() => restaurarPresupuesto(p.id)}
@@ -1042,9 +1056,9 @@ export default function Presupuestos({ perfil, soloLectura }) {
                 {p.items_materiales.map((i) => (
                   <tr key={i.id} style={{ borderBottom: "1px solid #34495e" }}>
                     <td style={{ padding: "0.25rem 0.5rem", color: "#e5e7eb" }}>
-                      {i.materiales?.nombre}{" "}
+                      {i.user_materiales?.nombre}{" "}
                       <span style={{ color: "#9ca3af", fontSize: "0.8rem" }}>
-                        ({i.materiales?.unidad})
+                        ({i.user_materiales?.unidad})
                       </span>
                     </td>
                     <td
@@ -1787,7 +1801,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
               >
                 <option value="">Todas las categorías</option>
                 {categorias.map((c) => (
-                  <option key={c.id} value={c.nombre}>
+                  <option key={c.id} value={c.id}>
                     {c.nombre}
                   </option>
                 ))}
@@ -1800,7 +1814,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                 {materiales
                   .filter(
                     (m) =>
-                      !categoriaSel || m.categorias?.nombre === categoriaSel,
+                      !categoriaSel || m.user_categoria_id === categoriaSel,
                   )
                   .map((m) => (
                     <option key={m.id} value={m.id}>
@@ -2326,7 +2340,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                         onClick={() => cargarDetalle(p.id)}
                         style={{
                           cursor: "pointer",
-                          ...(p.deleted_at
+                          ...(!p.is_active
                             ? {
                                 color: "#999",
                                 textDecoration: "line-through",
@@ -2334,7 +2348,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                               }
                             : {}),
                         }}
-                        className={p.deleted_at ? "eliminado" : ""}
+                        className={!p.is_active ? "eliminado" : ""}
                       >
                         <td
                           style={{
@@ -2353,7 +2367,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
                           ) : (
                             <span style={{ color: "#888" }}>—</span>
                           )}
-                          {p.deleted_at && (
+                          {!p.is_active && (
                             <span
                               style={{
                                 fontSize: "0.7rem",

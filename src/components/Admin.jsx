@@ -84,19 +84,17 @@ export default function Admin() {
       setPerfiles(mapaPerfiles);
 
       // Obtener conteos de presupuestos con service_role (solución RLS)
-      const { data: budgetCounts, error: budgetError } = await supabase.functions.invoke(
-        "admin-get-budget-counts",
-        {
+      const { data: budgetCounts, error: budgetError } =
+        await supabase.functions.invoke("admin-get-budget-counts", {
           method: "POST",
           body: {},
           headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+        });
 
       if (!budgetError && budgetCounts?.budgetCounts) {
         setCantPresupuestos(budgetCounts.budgetCounts);
       } else {
-        console.error('Error obteniendo conteos de presupuestos:', budgetError);
+        console.error("Error obteniendo conteos de presupuestos:", budgetError);
         setCantPresupuestos({});
       }
 
@@ -113,7 +111,9 @@ export default function Admin() {
     setActivando(userId);
     setMenuAbierto(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) throw new Error("No hay sesión activa");
 
@@ -124,15 +124,15 @@ export default function Admin() {
           method: "POST",
           body: { userId, nuevoEstado },
           headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        },
       );
 
       if (error) throw new Error(`Error al cambiar estado: ${error.message}`);
 
       // Actualizar estado local
-      setPerfiles(prev => ({
+      setPerfiles((prev) => ({
         ...prev,
-        [userId]: { ...prev[userId], estado: nuevoEstado }
+        [userId]: { ...prev[userId], estado: nuevoEstado },
       }));
 
       setUltimaActualizacion(new Date());
@@ -147,7 +147,11 @@ export default function Admin() {
   }
 
   async function handleEliminarUsuario(userId, userEmail) {
-    if (!confirm(`¿Estás seguro de eliminar permanentemente el usuario ${userEmail}?\n\nEsta acción eliminará:\n• Todos los presupuestos\n• Todos los clientes, materiales y servicios\n• El perfil del usuario\n• La cuenta de autenticación\n\nEsta acción NO se puede deshacer.`)) {
+    if (
+      !confirm(
+        `¿Estás seguro de eliminar permanentemente el usuario ${userEmail}?\n\nEsta acción eliminará:\n• Todos los presupuestos\n• Todos los clientes, materiales y servicios\n• El perfil del usuario\n• La cuenta de autenticación\n\nEsta acción NO se puede deshacer.`,
+      )
+    ) {
       return;
     }
 
@@ -156,14 +160,14 @@ export default function Admin() {
 
     try {
       // 1. Eliminar presupuestos (y sus dependencias)
-      
+
       // Primero obtener IDs de presupuestos para eliminar sus items
       const { data: presupuestosIds } = await supabase
         .from("presupuestos")
         .select("id")
         .eq("user_id", userId);
 
-      const presupuestoIdsList = presupuestosIds?.map(p => p.id) || [];
+      const presupuestoIdsList = presupuestosIds?.map((p) => p.id) || [];
 
       // Eliminar items de presupuestos
       if (presupuestoIdsList.length > 0) {
@@ -171,13 +175,19 @@ export default function Admin() {
           .from("presupuesto_materiales")
           .delete()
           .in("presupuesto_id", presupuestoIdsList);
-        if (errorItemsM) throw new Error(`Error al eliminar items de materiales: ${errorItemsM.message}`);
+        if (errorItemsM)
+          throw new Error(
+            `Error al eliminar items de materiales: ${errorItemsM.message}`,
+          );
 
         const { error: errorItemsS } = await supabase
           .from("presupuesto_servicios")
           .delete()
           .in("presupuesto_id", presupuestoIdsList);
-        if (errorItemsS) throw new Error(`Error al eliminar items de servicios: ${errorItemsS.message}`);
+        if (errorItemsS)
+          throw new Error(
+            `Error al eliminar items de servicios: ${errorItemsS.message}`,
+          );
       }
 
       // Eliminar presupuestos
@@ -185,43 +195,57 @@ export default function Admin() {
         .from("presupuestos")
         .delete()
         .eq("user_id", userId);
-      if (errorPresupuestos) throw new Error(`Error al eliminar presupuestos: ${errorPresupuestos.message}`);
+      if (errorPresupuestos)
+        throw new Error(
+          `Error al eliminar presupuestos: ${errorPresupuestos.message}`,
+        );
 
       // 2. Eliminar clientes
       const { error: errorClientes } = await supabase
         .from("clientes")
         .delete()
         .eq("user_id", userId);
-      if (errorClientes) throw new Error(`Error al eliminar clientes: ${errorClientes.message}`);
+      if (errorClientes)
+        throw new Error(`Error al eliminar clientes: ${errorClientes.message}`);
 
       // 3. Eliminar categorías
       const { error: errorCategorias } = await supabase
-        .from("categorias")
+        .from("user_categorias")
         .delete()
         .eq("user_id", userId);
-      if (errorCategorias) throw new Error(`Error al eliminar categorías: ${errorCategorias.message}`);
+      if (errorCategorias)
+        throw new Error(
+          `Error al eliminar categorías: ${errorCategorias.message}`,
+        );
 
       // 4. Eliminar materiales y servicios
-      
+
       const { error: errorMateriales } = await supabase
-        .from("materiales")
+        .from("user_materiales")
         .delete()
         .eq("user_id", userId);
-      if (errorMateriales) throw new Error(`Error al eliminar materiales: ${errorMateriales.message}`);
+      if (errorMateriales)
+        throw new Error(
+          `Error al eliminar materiales: ${errorMateriales.message}`,
+        );
 
       // 5. Eliminar servicios
       const { error: errorServicios } = await supabase
-        .from("servicios")
+        .from("user_servicios")
         .delete()
         .eq("user_id", userId);
-      if (errorServicios) throw new Error(`Error al eliminar servicios: ${errorServicios.message}`);
+      if (errorServicios)
+        throw new Error(
+          `Error al eliminar servicios: ${errorServicios.message}`,
+        );
 
       // 6. Eliminar perfil
       const { error: errorPerfil } = await supabase
         .from("perfil")
         .delete()
         .eq("id", userId);
-      if (errorPerfil) throw new Error(`Error al eliminar perfil: ${errorPerfil.message}`);
+      if (errorPerfil)
+        throw new Error(`Error al eliminar perfil: ${errorPerfil.message}`);
 
       // 9. Eliminar usuario completo con service role (solución definitiva)
       const { data: sessionData } = await supabase.auth.getSession();
@@ -230,22 +254,25 @@ export default function Admin() {
         {
           method: "POST",
           body: { userId },
-          headers: { 
-            Authorization: `Bearer ${sessionData.session?.access_token}` 
+          headers: {
+            Authorization: `Bearer ${sessionData.session?.access_token}`,
           },
-        }
+        },
       );
-      
-      if (error9) throw new Error(`Error al eliminar usuario completo: ${error9.message}`);
+
+      if (error9)
+        throw new Error(
+          `Error al eliminar usuario completo: ${error9.message}`,
+        );
 
       // Éxito: actualizar estado local
-      setUsuarios(prev => prev.filter(u => u.id !== userId));
-      setPerfiles(prev => {
+      setUsuarios((prev) => prev.filter((u) => u.id !== userId));
+      setPerfiles((prev) => {
         const newPerfiles = { ...prev };
         delete newPerfiles[userId];
         return newPerfiles;
       });
-      setCantPresupuestos(prev => {
+      setCantPresupuestos((prev) => {
         const newCant = { ...prev };
         delete newCant[userId];
         return newCant;
@@ -253,7 +280,6 @@ export default function Admin() {
 
       setUltimaActualizacion(new Date());
       setUltimoEstado("ok");
-      
     } catch (error) {
       setError(`Error al eliminar usuario: ${error.message}`);
       setUltimoEstado("error");
@@ -459,7 +485,9 @@ export default function Admin() {
                   <th>Último acceso</th>
                   <th style={{ textAlign: "center" }}>№</th>
                   <th>Estado</th>
-                  <th style={{ textAlign: "center", position: "relative" }}>Acciones</th>
+                  <th style={{ textAlign: "center", position: "relative" }}>
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -467,49 +495,53 @@ export default function Admin() {
                   .filter((u) => {
                     if (!busqueda) return true;
                     const email = (u.email || "").toLowerCase();
-                    const negocio = (perfiles[u.id]?.nombre_negocio || "").toLowerCase();
-                    return email.includes(busqueda) || negocio.includes(busqueda);
+                    const negocio = (
+                      perfiles[u.id]?.nombre_negocio || ""
+                    ).toLowerCase();
+                    return (
+                      email.includes(busqueda) || negocio.includes(busqueda)
+                    );
                   })
                   .map((u) => (
-                  <tr key={u.id}>
-                    <td style={{ fontSize: "0.82rem" }}>{u.email || "—"}</td>
-                    <td style={{ fontSize: "0.82rem" }}>
-                      {perfiles[u.id]?.nombre_negocio || "—"}
-                    </td>
-                    <td style={{ fontSize: "0.78rem", color: "#888" }}>
-                      {u.created_at
-                        ? new Date(u.created_at).toLocaleDateString("es-AR")
-                        : "—"}
-                    </td>
-                    <td style={{ fontSize: "0.78rem", color: "#888" }}>
-                      {u.last_sign_in_at
-                        ? new Date(u.last_sign_in_at).toLocaleDateString(
-                            "es-AR",
-                          )
-                        : "—"}
-                    </td>
-                    <td style={{ textAlign: "center", fontSize: "0.85rem" }}>
-                      {cantPresupuestos[u.id] || 0}
-                    </td>
-                    <td>
-                      <DropdownEstado userId={u.id} />
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <button
-                        className="btn btn-danger"
-                        onClick={() => handleEliminarUsuario(u.id, u.email)}
-                        style={{
-                          padding: "0.3rem 0.6rem",
-                          fontSize: "0.75rem",
-                          minWidth: "60px",
-                        }}
-                        title="Eliminar usuario permanentemente"
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                    <tr key={u.id}>
+                      <td style={{ fontSize: "0.82rem" }}>{u.email || "—"}</td>
+                      <td style={{ fontSize: "0.82rem" }}>
+                        {perfiles[u.id]?.nombre_negocio || "—"}
+                      </td>
+                      <td style={{ fontSize: "0.78rem", color: "#888" }}>
+                        {u.created_at
+                          ? new Date(u.created_at).toLocaleDateString("es-AR")
+                          : "—"}
+                      </td>
+                      <td style={{ fontSize: "0.78rem", color: "#888" }}>
+                        {u.last_sign_in_at
+                          ? new Date(u.last_sign_in_at).toLocaleDateString(
+                              "es-AR",
+                            )
+                          : "—"}
+                      </td>
+                      <td style={{ textAlign: "center", fontSize: "0.85rem" }}>
+                        {cantPresupuestos[u.id] || 0}
+                      </td>
+                      <td>
+                        <DropdownEstado userId={u.id} />
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => handleEliminarUsuario(u.id, u.email)}
+                          style={{
+                            padding: "0.3rem 0.6rem",
+                            fontSize: "0.75rem",
+                            minWidth: "60px",
+                          }}
+                          title="Eliminar usuario permanentemente"
+                        >
+                          🗑️
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

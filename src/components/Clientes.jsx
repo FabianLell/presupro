@@ -62,16 +62,18 @@ function IconoContraer() {
 
 function ToggleSwitch({ checked, onChange, label }) {
   return (
-    <label style={{ 
-      display: "flex", 
-      alignItems: "center", 
-      gap: "0.5rem", 
-      fontSize: "0.9rem", 
-      color: "#888",
-      cursor: "pointer",
-      userSelect: "none"
-    }}>
-      <div 
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        fontSize: "0.9rem",
+        color: "#888",
+        cursor: "pointer",
+        userSelect: "none",
+      }}
+    >
+      <div
         style={{
           position: "relative",
           width: "44px",
@@ -79,7 +81,7 @@ function ToggleSwitch({ checked, onChange, label }) {
           backgroundColor: checked ? "#2563eb" : "#374151",
           borderRadius: "12px",
           transition: "background-color 0.2s",
-          cursor: "pointer"
+          cursor: "pointer",
         }}
         onClick={() => onChange(!checked)}
       >
@@ -93,7 +95,7 @@ function ToggleSwitch({ checked, onChange, label }) {
             backgroundColor: "#fff",
             borderRadius: "50%",
             transition: "left 0.2s",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+            boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
           }}
         />
       </div>
@@ -102,35 +104,40 @@ function ToggleSwitch({ checked, onChange, label }) {
   );
 }
 
-function KebabMenu({ clienteId, onEdit, onDelete, isVisible, onClose, isEliminado }) {
-  if (!isVisible) return null;
+function KebabMenu({
+  clienteId,
+  onEdit,
+  onDelete,
+  isVisible,
+  onClose,
+  isEliminado,
+  position,
+}) {
+  if (!isVisible || !position) return null;
 
   return (
-    <div 
+    <div
       className="modal-overlay"
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(0, 0, 0, 0.3)",
         zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
       }}
       onClick={onClose}
     >
-      <div 
+      <div
         style={{
           position: "absolute",
           right: "10px",
-          top: "50%",
-          transform: "translateY(-50%)",
+          top: position.y,
+          transform: "translateY(0)",
           background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
           border: "1px solid #374151",
           borderRadius: "8px",
           padding: "0.5rem",
           minWidth: "120px",
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)"
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -141,7 +148,7 @@ function KebabMenu({ clienteId, onEdit, onDelete, isVisible, onClose, isEliminad
               width: "100%",
               justifyContent: "flex-start",
               padding: "0.5rem 0.75rem",
-              fontSize: "0.85rem"
+              fontSize: "0.85rem",
             }}
             onClick={() => {
               onEdit(clienteId);
@@ -158,7 +165,7 @@ function KebabMenu({ clienteId, onEdit, onDelete, isVisible, onClose, isEliminad
               width: "100%",
               justifyContent: "flex-start",
               padding: "0.5rem 0.75rem",
-              fontSize: "0.85rem"
+              fontSize: "0.85rem",
             }}
             onClick={() => {
               onDelete(clienteId);
@@ -174,7 +181,7 @@ function KebabMenu({ clienteId, onEdit, onDelete, isVisible, onClose, isEliminad
               width: "100%",
               justifyContent: "flex-start",
               padding: "0.5rem 0.75rem",
-              fontSize: "0.85rem"
+              fontSize: "0.85rem",
             }}
             onClick={() => {
               onDelete(clienteId);
@@ -235,12 +242,13 @@ export default function Clientes({ soloLectura }) {
   const [busqueda, setBusqueda] = useState("");
   const [confirmEliminar, setConfirmEliminar] = useState(null);
   const [mostrarEliminados, setMostrarEliminados] = useState(false);
-  
+
   // Mobile-specific states
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [kebabMenu, setKebabMenu] = useState(null);
+  const [kebabPosition, setKebabPosition] = useState(null);
   const [showMobileForm, setShowMobileForm] = useState(false);
-  
+
   const isMobile = useMobile();
 
   // Hook de protección contra pérdida de datos
@@ -274,16 +282,13 @@ export default function Clientes({ soloLectura }) {
 
   async function cargar() {
     setCargando(true);
-    let query = supabase
-      .from("clientes")
-      .select("*")
-      .order("apellido");
-    
-    // Filtrar por deleted_at según el toggle
+    let query = supabase.from("clientes").select("*").order("apellido");
+
+    // Filtrar por is_active según el toggle
     if (!mostrarEliminados) {
-      query = query.is("deleted_at", null);
+      query = query.eq("is_active", true);
     }
-    
+
     const { data, error } = await query;
     if (error) setError("Error al cargar clientes");
     else setClientes(data || []);
@@ -352,7 +357,7 @@ export default function Clientes({ soloLectura }) {
     setEsNuevo(true);
     setError("");
     setOk("");
-    
+
     // Mobile-specific: show form when creating new
     if (isMobile) {
       setShowMobileForm(true);
@@ -365,7 +370,7 @@ export default function Clientes({ soloLectura }) {
       setForm(VACIO);
       setModoEdicion(false);
       setEsNuevo(false);
-      
+
       // Mobile-specific: hide form when cancelling new
       if (isMobile) {
         setShowMobileForm(false);
@@ -374,7 +379,7 @@ export default function Clientes({ soloLectura }) {
       const c = clientes.find((x) => x.id === selId);
       if (c) seleccionar(c);
       setModoEdicion(false);
-      
+
       // Mobile-specific: hide form when cancelling edit
       if (isMobile) {
         setShowMobileForm(false);
@@ -397,6 +402,8 @@ export default function Clientes({ soloLectura }) {
 
   function handleKebabClick(clienteId, e) {
     e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setKebabPosition({ x: rect.left, y: rect.bottom });
     setKebabMenu(kebabMenu === clienteId ? null : clienteId);
   }
 
@@ -411,7 +418,7 @@ export default function Clientes({ soloLectura }) {
 
   function handleDeleteCliente(clienteId) {
     const cliente = clientes.find((c) => c.id === clienteId);
-    if (cliente?.deleted_at) {
+    if (!cliente?.is_active) {
       restaurar(clienteId);
     } else {
       setConfirmEliminar(clienteId);
@@ -469,7 +476,7 @@ export default function Clientes({ soloLectura }) {
       setOk("Cliente actualizado");
       setModoEdicion(false);
       dirtyForm.markAsClean();
-      
+
       // Mobile-specific: hide form after saving
       if (isMobile) {
         setShowMobileForm(false);
@@ -489,7 +496,7 @@ export default function Clientes({ soloLectura }) {
       setModoEdicion(false);
       setSelId(data.id);
       dirtyForm.markAsClean();
-      
+
       // Mobile-specific: hide form after saving new
       if (isMobile) {
         setShowMobileForm(false);
@@ -499,10 +506,10 @@ export default function Clientes({ soloLectura }) {
   }
 
   async function eliminar(id) {
-    // Soft delete: actualizar deleted_at en lugar de borrar
+    // Soft delete: actualizar is_active a false en lugar de borrar
     const { error } = await supabase
       .from("clientes")
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ is_active: false })
       .eq("id", id);
     if (error) {
       setError("Error al eliminar");
@@ -516,10 +523,10 @@ export default function Clientes({ soloLectura }) {
   }
 
   async function restaurar(id) {
-    // Restaurar: setear deleted_at a null
+    // Restaurar: setear is_active a true
     const { error } = await supabase
       .from("clientes")
-      .update({ deleted_at: null })
+      .update({ is_active: true })
       .eq("id", id);
     if (error) {
       setError("Error al restaurar");
@@ -544,28 +551,31 @@ export default function Clientes({ soloLectura }) {
   });
 
   const formularioVacio = !selId && !esNuevo;
-  
+
   // Mobile form visibility logic
   const shouldShowForm = !isMobile || (isMobile && showMobileForm);
 
   // Mobile client row component
   function MobileClientRow({ cliente }) {
     const isExpanded = expandedRows.has(cliente.id);
-    const isEliminado = cliente.deleted_at;
+    const isEliminado = !cliente.is_active;
 
     return (
       <div style={{ marginBottom: "0.5rem" }}>
         {/* Main row */}
         <div
+          className={`mobile-client-item ${selId === cliente.id ? "seleccionado" : ""} ${isEliminado ? "eliminado" : ""}`}
           style={{
-            background: "#1a1a1a",
-            border: "1px solid #2a2a2a",
+            background: "#1e293b",
+            border: "1px solid #334155",
             borderRadius: "8px",
             padding: "0.75rem",
             cursor: "pointer",
             transition: "all 0.15s ease",
             boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            ...(isEliminado ? { opacity: 0.6 } : {})
+            ...(isEliminado
+              ? { opacity: 0.6, textDecoration: "line-through" }
+              : {}),
           }}
           onClick={() => toggleExpandedRow(cliente.id)}
           onMouseEnter={(e) => {
@@ -574,112 +584,147 @@ export default function Clientes({ soloLectura }) {
             e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#1a1a1a";
+            e.currentTarget.style.background = "#1e293b";
             e.currentTarget.style.transform = "translateY(0)";
             e.currentTarget.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            {/* Left side: Name, Lastname, Phone */}
-            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ 
-                fontWeight: "500", 
+          {/* Fila 1: Nombre + Apellido + Teléfono + Kebab */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1rem",
+                fontWeight: "600",
                 color: "#f0f0f0",
-                fontSize: "0.95rem"
-              }}>
-                {cliente.nombre} {cliente.apellido}
-              </span>
-              {cliente.telefono && (
-                <span style={{ 
-                  color: "#888", 
-                  fontSize: "0.85rem",
-                  fontWeight: "400"
-                }}>
-                  {cliente.telefono}
-                </span>
-              )}
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                flex: 1,
+                maxWidth: "calc(100% - 80px)",
+                textAlign: "left",
+                paddingLeft: 0,
+                marginLeft: 0,
+              }}
+            >
+              {cliente.nombre} {cliente.apellido}
             </div>
-            
-            {/* Right side: Kebab menu */}
+            {cliente.telefono && (
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  color: "#888",
+                  margin: "0 0.5rem",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {cliente.telefono}
+              </div>
+            )}
             <button
               className="btn btn-secondary"
               style={{
                 padding: "0.25rem 0.5rem",
                 fontSize: "0.8rem",
-                minWidth: "auto"
+                minWidth: "auto",
               }}
               onClick={(e) => handleKebabClick(cliente.id, e)}
             >
               <IconoKebab />
             </button>
           </div>
-          
-          {/* Expand arrow - centered below main content */}
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "center", 
-            marginTop: "0.5rem",
-            color: "#888"
-          }}>
-            {isExpanded ? <IconoContraer /> : <IconoExpandir />}
-          </div>
-        </div>
 
-        {/* Expanded content */}
-        {isExpanded && (
+          {/* Expand arrow - centered below main content */}
           <div
             style={{
-              background: "#1f1f1f",
-              border: "1px solid #2a2a2a",
-              borderTop: "none",
-              borderRadius: "0 0 8px 8px",
-              padding: "0.75rem",
-              marginTop: "-1px",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "0.5rem",
+              color: "#888",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {isExpanded ? <IconoContraer /> : <IconoExpandir />}
+          </div>
+
+          {/* Fila 2: Email y DNI si está expandido */}
+          {isExpanded && (
+            <div
+              style={{
+                width: "100%",
+                marginTop: "0.5rem",
+                textAlign: "left",
+              }}
+            >
+              {cliente.email && (
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "0.3rem",
+                    wordWrap: "break-word",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {cliente.email}
+                </div>
+              )}
               {cliente.dni && (
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>DNI:</span>
-                  <span style={{ color: "#f0f0f0", fontSize: "0.9rem" }}>{cliente.dni}</span>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#888",
+                  }}
+                >
+                  DNI: {cliente.dni}
                 </div>
               )}
               {cliente.direccion && (
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>Dirección:</span>
-                  <span style={{ color: "#f0f0f0", fontSize: "0.9rem" }}>{cliente.direccion}</span>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#888",
+                    marginTop: "0.3rem",
+                  }}
+                >
+                  {cliente.direccion}
                 </div>
               )}
               {cliente.cuil_cuit && (
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>CUIT:</span>
-                  <span style={{ color: "#f0f0f0", fontSize: "0.9rem" }}>{cliente.cuil_cuit}</span>
-                </div>
-              )}
-              {cliente.email && (
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>Email:</span>
-                  <span style={{ color: "#f0f0f0", fontSize: "0.9rem" }}>{cliente.email}</span>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#888",
+                    marginTop: "0.3rem",
+                  }}
+                >
+                  CUIT: {cliente.cuil_cuit}
                 </div>
               )}
               {isEliminado && (
-                <div style={{ 
-                  textAlign: "center", 
-                  color: "#ff6b6b", 
-                  fontSize: "0.8rem", 
-                  fontWeight: "bold",
-                  marginTop: "0.5rem",
-                  padding: "0.25rem",
-                  background: "#2a1a1a",
-                  borderRadius: "4px"
-                }}>
+                <div
+                  style={{
+                    textAlign: "center",
+                    color: "#ff6b6b",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    marginTop: "0.5rem",
+                    padding: "0.25rem",
+                    background: "#2a1a1a",
+                    borderRadius: "4px",
+                  }}
+                >
                   ELIMINADO
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }
@@ -688,11 +733,21 @@ export default function Clientes({ soloLectura }) {
     <div className="md-layout">
       {/* FORMULARIO - Hidden on mobile unless showMobileForm is true */}
       {shouldShowForm && (
-        <div 
-          className="md-form-area" 
-          style={{ 
-            display: isMobile && !showMobileForm ? 'none' : 'block',
-            ...(isMobile ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50, background: '#1a1a1a' } : {})
+        <div
+          className="md-form-area"
+          style={{
+            display: isMobile && !showMobileForm ? "none" : "block",
+            ...(isMobile
+              ? {
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 50,
+                  background: "#1a1a1a",
+                }
+              : {}),
           }}
         >
           <div className="md-form-header">
@@ -703,59 +758,11 @@ export default function Clientes({ soloLectura }) {
                   ? "Datos del cliente"
                   : "Seleccioná un cliente"}
             </h2>
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <div
+              style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
+            >
               {error && <span className="msg-error">{error}</span>}
               {ok && <span className="msg-ok">{ok}</span>}
-              {!soloLectura && !modoEdicion && (
-                <button className="btn btn-primary" onClick={nuevo}>
-                  + Nuevo
-                </button>
-              )}
-              {!soloLectura && selId && !modoEdicion && !esNuevo && (
-                (() => {
-                  const cliente = clientes.find(c => c.id === selId);
-                  const isEliminado = cliente?.deleted_at;
-                  return !isEliminado ? (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setModoEdicion(true)}
-                    >
-                      <IconoEditar /> Editar
-                    </button>
-                  ) : null;
-                })()
-              )}
-              {!soloLectura && selId && !esNuevo && !modoEdicion && (
-                (() => {
-                  const cliente = clientes.find(c => c.id === selId);
-                  const isEliminado = cliente?.deleted_at;
-                  return isEliminado ? (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => restaurar(selId)}
-                    >
-                      ↺ Restaurar
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => setConfirmEliminar(selId)}
-                    >
-                      <IconoEliminar /> Eliminar
-                    </button>
-                  );
-                })()
-              )}
-              {modoEdicion && (
-                <>
-                  <button className="btn btn-primary" onClick={guardar}>
-                    Guardar
-                  </button>
-                  <button className="btn btn-secondary" onClick={cancelar}>
-                    Cancelar
-                  </button>
-                </>
-              )}
               {/* Mobile close button */}
               {isMobile && showMobileForm && (
                 <button
@@ -825,6 +832,71 @@ export default function Clientes({ soloLectura }) {
             readOnly={!modoEdicion}
             style={{ marginTop: "0.65rem" }}
           />
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.75rem",
+              marginTop: "1.5rem",
+            }}
+          >
+            {!modoEdicion && (
+              <>
+                {!isMobile && !soloLectura && (
+                  <button className="btn btn-primary" onClick={nuevo}>
+                    + Nuevo
+                  </button>
+                )}
+                {!soloLectura &&
+                  selId &&
+                  !esNuevo &&
+                  (() => {
+                    const cliente = clientes.find((c) => c.id === selId);
+                    const isEliminado = !cliente?.is_active;
+                    return !isEliminado ? (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setModoEdicion(true)}
+                      >
+                        <IconoEditar /> Editar
+                      </button>
+                    ) : null;
+                  })()}
+                {!soloLectura &&
+                  selId &&
+                  !esNuevo &&
+                  (() => {
+                    const cliente = clientes.find((c) => c.id === selId);
+                    const isEliminado = !cliente?.is_active;
+                    return isEliminado ? (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => restaurar(selId)}
+                      >
+                        ↺ Restaurar
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => setConfirmEliminar(selId)}
+                      >
+                        <IconoEliminar /> Eliminar
+                      </button>
+                    );
+                  })()}
+              </>
+            )}
+            {modoEdicion && (
+              <>
+                <button className="btn btn-secondary" onClick={cancelar}>
+                  Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={guardar}>
+                  Guardar
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -835,7 +907,11 @@ export default function Clientes({ soloLectura }) {
             placeholder="Buscar cliente..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            style={{ flex: 1 }}
+            style={{
+              flex: isMobile ? "1" : "1",
+              height: isMobile ? "44px" : "auto",
+              fontSize: isMobile ? "1rem" : "auto",
+            }}
           />
           {/* Mobile: Toggle switch, Desktop: Checkbox */}
           {isMobile ? (
@@ -845,14 +921,16 @@ export default function Clientes({ soloLectura }) {
               label="Eliminados"
             />
           ) : (
-            <label style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "0.5rem", 
-              fontSize: "0.9rem", 
-              color: "#888",
-              whiteSpace: "nowrap"
-            }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.9rem",
+                color: "#888",
+                whiteSpace: "nowrap",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={mostrarEliminados}
@@ -860,6 +938,30 @@ export default function Clientes({ soloLectura }) {
               />
               Ver Eliminados
             </label>
+          )}
+          {isMobile && !soloLectura && (
+            <button
+              className="btn btn-primary"
+              onClick={nuevo}
+              style={{
+                height: "44px",
+                padding: "0.75rem 1.5rem",
+                minWidth: "120px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: "600",
+                }}
+              >
+                + Nuevo
+              </span>
+            </button>
           )}
         </div>
       </div>
@@ -877,7 +979,9 @@ export default function Clientes({ soloLectura }) {
               <table style={{ tableLayout: "fixed", width: "100%" }}>
                 <thead>
                   <tr>
-                    <th style={{ width: "40%", textAlign: "left" }}>Apellido, Nombre</th>
+                    <th style={{ width: "40%", textAlign: "left" }}>
+                      Apellido, Nombre
+                    </th>
                     <th style={{ width: "15%" }}>Teléfono</th>
                     <th style={{ width: "30%" }}>Email</th>
                     <th style={{ width: "15%" }}>DNI</th>
@@ -887,25 +991,31 @@ export default function Clientes({ soloLectura }) {
                   {filtrados.map((c) => (
                     <tr
                       key={c.id}
-                      className={`${selId === c.id ? "seleccionado" : ""} ${c.deleted_at ? "eliminado" : ""}`}
+                      className={`${selId === c.id ? "seleccionado" : ""} ${!c.is_active ? "eliminado" : ""}`}
                       onClick={() => seleccionar(c)}
-                      style={c.deleted_at ? { 
-                        color: "#999", 
-                        textDecoration: "line-through",
-                        opacity: 0.7 
-                      } : {}}
+                      style={
+                        !c.is_active
+                          ? {
+                              color: "#999",
+                              textDecoration: "line-through",
+                              opacity: 0.7,
+                            }
+                          : {}
+                      }
                     >
                       <td style={{ textAlign: "left" }}>
                         <span>
                           {c.apellido}, {c.nombre}
                         </span>
-                        {c.deleted_at && (
-                          <span style={{ 
-                            fontSize: "0.7rem", 
-                            color: "#ff6b6b", 
-                            fontWeight: "bold",
-                            marginLeft: "0.5rem"
-                          }}>
+                        {!c.is_active && (
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              color: "#ff6b6b",
+                              fontWeight: "bold",
+                              marginLeft: "0.5rem",
+                            }}
+                          >
                             ELIMINADO
                           </span>
                         )}
@@ -918,7 +1028,7 @@ export default function Clientes({ soloLectura }) {
                 </tbody>
               </table>
             )}
-            
+
             {/* Mobile view */}
             {isMobile && (
               <div style={{ padding: "0.5rem" }}>
@@ -936,10 +1046,14 @@ export default function Clientes({ soloLectura }) {
         <KebabMenu
           clienteId={kebabMenu}
           isVisible={true}
-          onClose={() => setKebabMenu(null)}
+          onClose={() => {
+            setKebabMenu(null);
+            setKebabPosition(null);
+          }}
           onEdit={handleEditCliente}
           onDelete={handleDeleteCliente}
-          isEliminado={clientes.find(c => c.id === kebabMenu)?.deleted_at}
+          isEliminado={!clientes.find((c) => c.id === kebabMenu)?.is_active}
+          position={kebabPosition}
         />
       )}
 
@@ -955,7 +1069,8 @@ export default function Clientes({ soloLectura }) {
                 margin: "0.5rem 0 1rem",
               }}
             >
-              El cliente será archivado y no aparecerá en los listados. Podrás restaurarlo más tarde si es necesario.
+              El cliente será archivado y no aparecerá en los listados. Podrás
+              restaurarlo más tarde si es necesario.
             </p>
             <div className="modal-footer">
               <button

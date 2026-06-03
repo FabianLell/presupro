@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { supabase, getUserId } from "../supabase";
 import { useDirtyForm } from "../hooks/useDirtyForm";
+import { useMobile } from "../hooks/use-mobile";
 
 const VACIO = { nombre: "", descripcion: "", precio: "" };
 
@@ -38,6 +39,97 @@ function IconoEliminar() {
   );
 }
 
+function IconoKebab() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </svg>
+  );
+}
+
+function IconoExpandir() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function IconoContraer() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <polyline points="18 15 12 9 6 15" />
+    </svg>
+  );
+}
+
+function ToggleSwitch({ checked, onChange, label }) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        fontSize: "0.9rem",
+        color: "#888",
+        cursor: "pointer",
+        userSelect: "none",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: "44px",
+          height: "24px",
+          backgroundColor: checked ? "#2563eb" : "#374151",
+          borderRadius: "12px",
+          transition: "background-color 0.2s",
+          cursor: "pointer",
+        }}
+        onClick={() => onChange(!checked)}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: "2px",
+            left: checked ? "22px" : "2px",
+            width: "20px",
+            height: "20px",
+            backgroundColor: "#fff",
+            borderRadius: "50%",
+            transition: "left 0.2s",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+          }}
+        />
+      </div>
+      <span>{label}</span>
+    </label>
+  );
+}
+
 export default function Servicios({ soloLectura }) {
   const [servicios, setServicios] = useState([]);
   const [form, setForm] = useState(VACIO);
@@ -50,6 +142,14 @@ export default function Servicios({ soloLectura }) {
   const [busqueda, setBusqueda] = useState("");
   const [confirmEliminar, setConfirmEliminar] = useState(null);
   const [mostrarEliminados, setMostrarEliminados] = useState(false);
+
+  // Mobile-specific states
+  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [kebabMenu, setKebabMenu] = useState(null);
+  const [kebabPosition, setKebabPosition] = useState(null);
+  const [showMobileForm, setShowMobileForm] = useState(false);
+
+  const isMobile = useMobile();
 
   // Hook de protección contra pérdida de datos
   const dirtyForm = useDirtyForm(VACIO, async () => {
@@ -82,16 +182,13 @@ export default function Servicios({ soloLectura }) {
 
   async function cargar() {
     setCargando(true);
-    let query = supabase
-      .from("servicios")
-      .select("*")
-      .order("nombre");
-    
-    // Filtrar por deleted_at según el toggle
+    let query = supabase.from("user_servicios").select("*").order("nombre");
+
+    // Filtrar por is_active según el toggle
     if (!mostrarEliminados) {
-      query = query.is("deleted_at", null);
+      query = query.eq("is_active", true);
     }
-    
+
     const { data, error } = await query;
     if (error) setError("Error al cargar servicios");
     else setServicios(data || []);
@@ -151,6 +248,10 @@ export default function Servicios({ soloLectura }) {
     setEsNuevo(true);
     setError("");
     setOk("");
+
+    if (isMobile) {
+      setShowMobileForm(true);
+    }
   }
 
   function cancelar() {
@@ -159,10 +260,18 @@ export default function Servicios({ soloLectura }) {
       setForm(VACIO);
       setModoEdicion(false);
       setEsNuevo(false);
+
+      if (isMobile) {
+        setShowMobileForm(false);
+      }
     } else {
       const s = servicios.find((x) => x.id === selId);
       if (s) seleccionar(s);
       setModoEdicion(false);
+
+      if (isMobile) {
+        setShowMobileForm(false);
+      }
     }
     setError("");
     setOk("");
@@ -172,7 +281,6 @@ export default function Servicios({ soloLectura }) {
     setError("");
     setOk("");
 
-    // Obtener datos del hook si el componente está vacío
     let currentForm = form;
     if (dirtyForm.currentData && dirtyForm.currentData.nombre) {
       currentForm = {
@@ -201,7 +309,7 @@ export default function Servicios({ soloLectura }) {
 
     if (!esNuevo && selId) {
       const { error } = await supabase
-        .from("servicios")
+        .from("user_servicios")
         .update(datos)
         .eq("id", selId);
       if (error) {
@@ -211,9 +319,13 @@ export default function Servicios({ soloLectura }) {
       setOk("Servicio actualizado");
       setModoEdicion(false);
       dirtyForm.markAsClean();
+
+      if (isMobile) {
+        setShowMobileForm(false);
+      }
     } else {
       const { data, error } = await supabase
-        .from("servicios")
+        .from("user_servicios")
         .insert([datos])
         .select()
         .single();
@@ -226,6 +338,10 @@ export default function Servicios({ soloLectura }) {
       setModoEdicion(false);
       setSelId(data.id);
       dirtyForm.markAsClean();
+
+      if (isMobile) {
+        setShowMobileForm(false);
+      }
     }
 
     setForm(VACIO);
@@ -233,10 +349,10 @@ export default function Servicios({ soloLectura }) {
   }
 
   async function eliminar(id) {
-    // Soft delete: actualizar deleted_at en lugar de borrar
+    // Soft delete: actualizar is_active a false en lugar de borrar
     const { error } = await supabase
-      .from("servicios")
-      .update({ deleted_at: new Date().toISOString() })
+      .from("user_servicios")
+      .update({ is_active: false })
       .eq("id", id);
     if (error) {
       setError("Error al eliminar");
@@ -248,12 +364,11 @@ export default function Servicios({ soloLectura }) {
     setConfirmEliminar(null);
     cargar();
   }
-  
+
   async function restaurar(id) {
-    // Restaurar: setear deleted_at a null
     const { error } = await supabase
-      .from("servicios")
-      .update({ deleted_at: null })
+      .from("user_servicios")
+      .update({ is_active: true })
       .eq("id", id);
     if (error) {
       setError("Error al restaurar");
@@ -263,6 +378,42 @@ export default function Servicios({ soloLectura }) {
     setForm(VACIO);
     setModoEdicion(false);
     cargar();
+  }
+
+  // Mobile-specific functions
+  function toggleExpandedRow(servicioId) {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(servicioId)) {
+      newExpanded.delete(servicioId);
+    } else {
+      newExpanded.add(servicioId);
+    }
+    setExpandedRows(newExpanded);
+  }
+
+  function handleKebabClick(servicioId, e) {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setKebabPosition({ x: rect.left, y: rect.bottom });
+    setKebabMenu(kebabMenu === servicioId ? null : servicioId);
+  }
+
+  function handleEditServicio(servicioId) {
+    const servicio = servicios.find((s) => s.id === servicioId);
+    if (servicio) {
+      seleccionar(servicio);
+      setModoEdicion(true);
+      setShowMobileForm(true);
+    }
+  }
+
+  function handleDeleteServicio(servicioId) {
+    const servicio = servicios.find((s) => s.id === servicioId);
+    if (!servicio?.is_active) {
+      restaurar(servicioId);
+    } else {
+      setConfirmEliminar(servicioId);
+    }
   }
 
   const filtrados = servicios.filter((s) => {
@@ -276,100 +427,378 @@ export default function Servicios({ soloLectura }) {
 
   const formularioVacio = !selId && !esNuevo;
 
+  // Mobile form visibility logic
+  const shouldShowForm = !isMobile || (isMobile && showMobileForm);
+
+  function KebabMenu({
+    servicioId,
+    onEdit,
+    onDelete,
+    isVisible,
+    onClose,
+    isEliminado,
+    position,
+  }) {
+    if (!isVisible || !position) return null;
+
+    return (
+      <div
+        className="modal-overlay"
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.3)",
+          zIndex: 100,
+        }}
+        onClick={onClose}
+      >
+        <div
+          style={{
+            position: "absolute",
+            right: "10px",
+            top: position.y,
+            transform: "translateY(0)",
+            background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
+            border: "1px solid #374151",
+            borderRadius: "8px",
+            padding: "0.5rem",
+            minWidth: "120px",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!isEliminado && (
+            <button
+              className="btn btn-secondary"
+              style={{
+                width: "100%",
+                justifyContent: "flex-start",
+                padding: "0.5rem 0.75rem",
+                fontSize: "0.85rem",
+              }}
+              onClick={() => {
+                onEdit(servicioId);
+                onClose();
+              }}
+            >
+              <IconoEditar /> Editar
+            </button>
+          )}
+          {isEliminado ? (
+            <button
+              className="btn btn-primary"
+              style={{
+                width: "100%",
+                justifyContent: "flex-start",
+                padding: "0.5rem 0.75rem",
+                fontSize: "0.85rem",
+              }}
+              onClick={() => {
+                onDelete(servicioId);
+                onClose();
+              }}
+            >
+              ↺ Restaurar
+            </button>
+          ) : (
+            <button
+              className="btn btn-danger"
+              style={{
+                width: "100%",
+                justifyContent: "flex-start",
+                padding: "0.5rem 0.75rem",
+                fontSize: "0.85rem",
+              }}
+              onClick={() => {
+                onDelete(servicioId);
+                onClose();
+              }}
+            >
+              <IconoEliminar /> Eliminar
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function MobileServiceRow({ servicio }) {
+    const isExpanded = expandedRows.has(servicio.id);
+    const isEliminado = !servicio.is_active;
+
+    return (
+      <div style={{ marginBottom: "0.5rem" }}>
+        <div
+          className={`mobile-service-item ${selId === servicio.id ? "seleccionado" : ""} ${isEliminado ? "eliminado" : ""}`}
+          style={{
+            background: "#1e293b",
+            border: "1px solid #334155",
+            borderRadius: "8px",
+            padding: "0.75rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            ...(isEliminado
+              ? { opacity: 0.6, textDecoration: "line-through" }
+              : {}),
+          }}
+          onClick={() => toggleExpandedRow(servicio.id)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#222";
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#1e293b";
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1rem",
+                fontWeight: "600",
+                color: "#f0f0f0",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                flex: 1,
+                maxWidth: "calc(100% - 120px)",
+                textAlign: "left",
+                paddingLeft: 0,
+                marginLeft: 0,
+              }}
+            >
+              {servicio.nombre}
+            </div>
+            <div
+              style={{
+                fontSize: "1.1rem",
+                fontWeight: "700",
+                color: "#4ade80",
+                fontFamily: "monospace",
+                margin: "0 0.5rem",
+                whiteSpace: "nowrap",
+              }}
+            >
+              ${parseFloat(servicio.precio).toLocaleString("es-AR")}
+            </div>
+            <button
+              className="btn btn-secondary"
+              style={{
+                padding: "0.25rem 0.5rem",
+                fontSize: "0.8rem",
+                minWidth: "auto",
+              }}
+              onClick={(e) => handleKebabClick(servicio.id, e)}
+            >
+              <IconoKebab />
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "0.5rem",
+              color: "#888",
+            }}
+          >
+            {isExpanded ? <IconoContraer /> : <IconoExpandir />}
+          </div>
+
+          {isExpanded && (
+            <div
+              style={{
+                width: "100%",
+                marginTop: "0.5rem",
+                textAlign: "left",
+              }}
+            >
+              {servicio.descripcion && (
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginBottom: "0.3rem",
+                    wordWrap: "break-word",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {servicio.descripcion}
+                </div>
+              )}
+              {isEliminado && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    color: "#ff6b6b",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    marginTop: "0.5rem",
+                    padding: "0.25rem",
+                    background: "#2a1a1a",
+                    borderRadius: "4px",
+                  }}
+                >
+                  ELIMINADO
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="md-layout">
-      <div className="md-form-area">
-        <div className="md-form-header">
-          <h2 className={formularioVacio ? "" : "activo"}>
-            {esNuevo
-              ? "Nuevo servicio"
-              : selId
-                ? "Datos del servicio"
-                : "Seleccioná un servicio"}
-          </h2>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            {error && <span className="msg-error">{error}</span>}
-            {ok && <span className="msg-ok">{ok}</span>}
-            {!soloLectura && !modoEdicion && (
-              <button className="btn btn-primary" onClick={nuevo}>
-                + Nuevo
-              </button>
-            )}
-            {!soloLectura && selId && !modoEdicion && !esNuevo && (
-              (() => {
-                const servicio = servicios.find(s => s.id === selId);
-                const isEliminado = servicio?.deleted_at;
-                return !isEliminado ? (
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setModoEdicion(true)}
-                  >
-                    <IconoEditar /> Editar
+      {/* FORMULARIO - Hidden on mobile unless showMobileForm is true */}
+      {shouldShowForm && (
+        <div
+          className="md-form-area"
+          style={{
+            display: isMobile && !showMobileForm ? "none" : "block",
+            ...(isMobile
+              ? {
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 50,
+                  background: "#1a1a1a",
+                }
+              : {}),
+          }}
+        >
+          <div className="md-form-header">
+            <h2 className={formularioVacio ? "" : "activo"}>
+              {esNuevo
+                ? "Nuevo servicio"
+                : selId
+                  ? "Datos del servicio"
+                  : "Seleccioná un servicio"}
+            </h2>
+            <div
+              style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
+            >
+              {error && <span className="msg-error">{error}</span>}
+              {ok && <span className="msg-ok">{ok}</span>}
+              {/* Mobile close button */}
+              {isMobile && showMobileForm && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowMobileForm(false)}
+                  style={{ marginLeft: "auto" }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          <input
+            name="nombre"
+            placeholder="Nombre (ej: Armado, Pintado, Soldadura) *"
+            value={form.nombre}
+            onChange={handleChange}
+            readOnly={!modoEdicion}
+          />
+
+          <input
+            name="descripcion"
+            placeholder="Descripción opcional"
+            value={form.descripcion}
+            onChange={handleChange}
+            readOnly={!modoEdicion}
+            style={{ marginTop: "0.65rem" }}
+          />
+
+          <input
+            name="precio"
+            type="number"
+            placeholder="Precio ($) *"
+            value={form.precio}
+            onChange={handleChange}
+            readOnly={!modoEdicion}
+            style={{ marginTop: "0.65rem" }}
+          />
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.75rem",
+              marginTop: "1.5rem",
+            }}
+          >
+            {!modoEdicion && (
+              <>
+                {!isMobile && !soloLectura && (
+                  <button className="btn btn-primary" onClick={nuevo}>
+                    + Nuevo
                   </button>
-                ) : null;
-              })()
-            )}
-            {!soloLectura && selId && !esNuevo && !modoEdicion && (
-              (() => {
-                const servicio = servicios.find(s => s.id === selId);
-                const isEliminado = servicio?.deleted_at;
-                return isEliminado ? (
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => restaurar(selId)}
-                  >
-                    ↺ Restaurar
-                  </button>
-                ) : (
-                  <button
-                    className="btn btn-danger"
-                    onClick={() => setConfirmEliminar(selId)}
-                  >
-                    <IconoEliminar /> Eliminar
-                  </button>
-                );
-              })()
+                )}
+                {!soloLectura &&
+                  selId &&
+                  !esNuevo &&
+                  (() => {
+                    const servicio = servicios.find((s) => s.id === selId);
+                    const isEliminado = !servicio?.is_active;
+                    return !isEliminado ? (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setModoEdicion(true)}
+                      >
+                        <IconoEditar /> Editar
+                      </button>
+                    ) : null;
+                  })()}
+                {!soloLectura &&
+                  selId &&
+                  !esNuevo &&
+                  (() => {
+                    const servicio = servicios.find((s) => s.id === selId);
+                    const isEliminado = !servicio?.is_active;
+                    return isEliminado ? (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => restaurar(selId)}
+                      >
+                        ↺ Restaurar
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => setConfirmEliminar(selId)}
+                      >
+                        <IconoEliminar /> Eliminar
+                      </button>
+                    );
+                  })()}
+              </>
             )}
             {modoEdicion && (
               <>
-                <button className="btn btn-primary" onClick={guardar}>
-                  Guardar
-                </button>
                 <button className="btn btn-secondary" onClick={cancelar}>
                   Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={guardar}>
+                  Guardar
                 </button>
               </>
             )}
           </div>
         </div>
-
-        <input
-          name="nombre"
-          placeholder="Nombre (ej: Armado, Pintado, Soldadura) *"
-          value={form.nombre}
-          onChange={handleChange}
-          readOnly={!modoEdicion}
-        />
-
-        <input
-          name="descripcion"
-          placeholder="Descripción opcional"
-          value={form.descripcion}
-          onChange={handleChange}
-          readOnly={!modoEdicion}
-          style={{ marginTop: "0.65rem" }}
-        />
-
-        <input
-          name="precio"
-          type="number"
-          placeholder="Precio ($) *"
-          value={form.precio}
-          onChange={handleChange}
-          readOnly={!modoEdicion}
-          style={{ marginTop: "0.65rem" }}
-        />
-      </div>
+      )}
 
       <div className="md-search-area">
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -377,23 +806,62 @@ export default function Servicios({ soloLectura }) {
             placeholder="Buscar servicio..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            style={{ flex: 1 }}
+            style={{
+              flex: isMobile ? "1" : "1",
+              height: isMobile ? "44px" : "auto",
+              fontSize: isMobile ? "1rem" : "auto",
+            }}
           />
-          <label style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: "0.5rem", 
-            fontSize: "0.9rem", 
-            color: "#888",
-            whiteSpace: "nowrap"
-          }}>
-            <input
-              type="checkbox"
+          {/* Mobile: Toggle switch, Desktop: Checkbox */}
+          {isMobile ? (
+            <ToggleSwitch
               checked={mostrarEliminados}
-              onChange={(e) => setMostrarEliminados(e.target.checked)}
+              onChange={setMostrarEliminados}
+              label="Eliminados"
             />
-            Ver Eliminados
-          </label>
+          ) : (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.9rem",
+                color: "#888",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={mostrarEliminados}
+                onChange={(e) => setMostrarEliminados(e.target.checked)}
+              />
+              Ver Eliminados
+            </label>
+          )}
+          {isMobile && !soloLectura && (
+            <button
+              className="btn btn-primary"
+              onClick={nuevo}
+              style={{
+                height: "44px",
+                padding: "0.75rem 1.5rem",
+                minWidth: "120px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: "600",
+                }}
+              >
+                + Nuevo
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -403,49 +871,69 @@ export default function Servicios({ soloLectura }) {
         ) : filtrados.length === 0 ? (
           <p style={{ color: "#888", padding: "1rem" }}>No hay servicios</p>
         ) : (
-          <table style={{ tableLayout: "fixed", width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={{ width: "25%", textAlign: "left" }}>Nombre</th>
-                <th style={{ width: "50%" }}>Descripción</th>
-                <th style={{ width: "25%" }}>Precio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((s) => (
-                <tr
-                  key={s.id}
-                  className={`${selId === s.id ? "seleccionado" : ""} ${s.deleted_at ? "eliminado" : ""}`}
-                  onClick={() => seleccionar(s)}
-                  style={s.deleted_at ? { 
-                    color: "#999", 
-                    textDecoration: "line-through",
-                    opacity: 0.7 
-                  } : {}}
-                >
-                  <td style={{ textAlign: "left" }}>
-                    <span>
-                      {s.nombre}
-                    </span>
-                    {s.deleted_at && (
-                      <span style={{ 
-                        fontSize: "0.7rem", 
-                        color: "#ff6b6b", 
-                        fontWeight: "bold",
-                        marginLeft: "0.5rem"
-                      }}>
-                        ELIMINADO
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ color: "#888" }}>{s.descripcion || "—"}</td>
-                  <td style={{ textAlign: "right", fontFamily: "monospace" }}>
-                    ${parseFloat(s.precio).toLocaleString("es-AR")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <>
+            {/* Desktop view */}
+            {!isMobile && (
+              <table style={{ tableLayout: "fixed", width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "25%", textAlign: "left" }}>Nombre</th>
+                    <th style={{ width: "50%" }}>Descripción</th>
+                    <th style={{ width: "25%" }}>Precio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtrados.map((s) => (
+                    <tr
+                      key={s.id}
+                      className={`${selId === s.id ? "seleccionado" : ""} ${!s.is_active ? "eliminado" : ""}`}
+                      onClick={() => seleccionar(s)}
+                      style={
+                        !s.is_active
+                          ? {
+                              color: "#999",
+                              textDecoration: "line-through",
+                              opacity: 0.7,
+                            }
+                          : {}
+                      }
+                    >
+                      <td style={{ textAlign: "left" }}>
+                        <span>{s.nombre}</span>
+                        {!s.is_active && (
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              color: "#ff6b6b",
+                              fontWeight: "bold",
+                              marginLeft: "0.5rem",
+                            }}
+                          >
+                            ELIMINADO
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ color: "#888" }}>{s.descripcion || "—"}</td>
+                      <td
+                        style={{ textAlign: "right", fontFamily: "monospace" }}
+                      >
+                        ${parseFloat(s.precio).toLocaleString("es-AR")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {/* Mobile view */}
+            {isMobile && (
+              <div style={{ padding: "0.5rem" }}>
+                {filtrados.map((s) => (
+                  <MobileServiceRow key={s.id} servicio={s} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -460,7 +948,8 @@ export default function Servicios({ soloLectura }) {
                 margin: "0.5rem 0 1rem",
               }}
             >
-              El servicio será archivado y no aparecerá en los listados. Podrás restaurarlo más tarde si es necesario.
+              El servicio será archivado y no aparecerá en los listados. Podrás
+              restaurarlo más tarde si es necesario.
             </p>
             <div className="modal-footer">
               <button
@@ -478,6 +967,22 @@ export default function Servicios({ soloLectura }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Kebab Menu */}
+      {kebabMenu && (
+        <KebabMenu
+          servicioId={kebabMenu}
+          isVisible={true}
+          onClose={() => {
+            setKebabMenu(null);
+            setKebabPosition(null);
+          }}
+          onEdit={handleEditServicio}
+          onDelete={handleDeleteServicio}
+          isEliminado={!servicios.find((s) => s.id === kebabMenu)?.is_active}
+          position={kebabPosition}
+        />
       )}
     </div>
   );
