@@ -50,7 +50,55 @@ function useGridConfig() {
   return gridConfig;
 }
 
-// Toggle ultra-compacto estilo SaaS Premium
+// 3-State Toggle (INACTIVE, PARTIAL, COMPLETE)
+function ThreeStateToggle({ state, onChange, disabled = false }) {
+  const stateConfig = {
+    0: { bg: "#475569", knobX: "1px", label: "Inactivo" },
+    1: { bg: "#3b82f6", knobX: "6px", label: "Parcial" },
+    2: { bg: "#10b981", knobX: "12px", label: "Completo" },
+  };
+
+  const config = stateConfig[state] || stateConfig[0];
+
+  return (
+    <button
+      type="button"
+      onClick={() => !disabled && onChange(state === 2 ? 0 : state + 1)}
+      disabled={disabled}
+      style={{
+        position: "relative",
+        width: "26px",
+        height: "14px",
+        backgroundColor: config.bg,
+        border: "none",
+        borderRadius: "7px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        outline: "none",
+        boxShadow:
+          state > 0
+            ? `0 0 0 1px rgba(${state === 1 ? "59, 130, 246" : "16, 185, 129"}, 0.2)`
+            : "inset 0 1px 1px rgba(0, 0, 0, 0.1)",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: "1px",
+          left: config.knobX,
+          width: "12px",
+          height: "12px",
+          backgroundColor: "#ffffff",
+          borderRadius: "50%",
+          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+        }}
+      />
+    </button>
+  );
+}
+
+// Binary Toggle (for other uses)
 function ModernToggle({ checked, onChange, disabled = false }) {
   return (
     <button
@@ -91,8 +139,34 @@ function ModernToggle({ checked, onChange, disabled = false }) {
 }
 
 // Tarjeta simple sin expansión ni botones extra
-function RubroCard({ rubro, activo, onToggle, onClick }) {
+function RubroCard({
+  rubro,
+  toggleState,
+  activeMaterials,
+  totalMaterials,
+  onToggle,
+  onClick,
+}) {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Calculate legend text based on state
+  const getLegendText = () => {
+    if (toggleState === 0) {
+      return "Inactivo (0 materiales)";
+    } else if (toggleState === 1) {
+      return `${activeMaterials} de ${totalMaterials} materiales`;
+    } else {
+      return `Completo (${totalMaterials}/${totalMaterials})`;
+    }
+  };
+
+  const getLegendColor = () => {
+    if (toggleState === 0) return "#64748b";
+    if (toggleState === 1) return "#3b82f6";
+    return "#10b981";
+  };
+
+  const isActive = toggleState > 0;
 
   return (
     <div
@@ -101,8 +175,8 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        backgroundColor: activo ? "#1f2937" : "#111827",
-        border: `1px solid ${activo ? "#059669" : "#374151"}`,
+        backgroundColor: isActive ? "#1f2937" : "#111827",
+        border: `1px solid ${isActive ? "#059669" : "#374151"}`,
         borderRadius: "8px",
         padding: "12px",
         cursor: "pointer",
@@ -111,7 +185,7 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
           ? "0 4px 6px rgba(0, 0, 0, 0.1)"
           : "0 2px 4px rgba(0, 0, 0, 0.05)",
         transform: isHovered ? "translateY(-2px)" : "translateY(0)",
-        opacity: activo ? 1 : 0.8,
+        opacity: isActive ? 1 : 0.8,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -121,7 +195,7 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
             fontSize: "20px",
             width: "32px",
             height: "32px",
-            backgroundColor: activo
+            backgroundColor: isActive
               ? "rgba(5, 150, 105, 0.2)"
               : "rgba(55, 65, 81, 0.3)",
             borderRadius: "6px",
@@ -134,17 +208,27 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
           {rubro.icono}
         </div>
 
-        {/* Nombre */}
+        {/* Nombre y Legend */}
         <div
           style={{
-            color: activo ? "#f3f4f6" : "#9ca3af",
-            fontSize: "14px",
-            fontWeight: "500",
+            color: isActive ? "#f3f4f6" : "#9ca3af",
             flex: 1,
             textAlign: "left",
           }}
         >
-          {rubro.nombre}
+          <div style={{ fontSize: "14px", fontWeight: "500" }}>
+            {rubro.nombre}
+          </div>
+          <div
+            style={{
+              fontSize: "11px",
+              color: getLegendColor(),
+              marginTop: "2px",
+              fontWeight: toggleState === 2 ? "500" : "400",
+            }}
+          >
+            {getLegendText()}
+          </div>
         </div>
 
         {/* Toggle */}
@@ -152,7 +236,11 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
           onClick={(e) => e.stopPropagation()}
           style={{ flexShrink: 0, marginRight: "8px" }}
         >
-          <ModernToggle checked={activo} onChange={onToggle} disabled={false} />
+          <ThreeStateToggle
+            state={toggleState}
+            onChange={onToggle}
+            disabled={false}
+          />
         </div>
 
         {/* Icono de configuración */}
@@ -215,7 +303,12 @@ function RubroCard({ rubro, activo, onToggle, onClick }) {
 }
 
 // Vista detallada del rubro con tree-view
-function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
+function VistaDetalladaRubro({
+  rubro,
+  onVolver,
+  onUpdateRubroState,
+  rubroState,
+}) {
   const [categorias, setCategorias] = useState([]);
   const [materiales, setMateriales] = useState({});
   const [categoriasExpandidas, setCategoriasExpandidas] = useState({});
@@ -328,11 +421,13 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
           }
         });
 
-        setMaterialesActivados(materialesActivadosState);
-        setCategoriasActivadas(categoriasActivadasState);
-
-        // Si el rubro está seleccionado, activar todas sus categorías y materiales
-        if (rubrosSeleccionados && rubrosSeleccionados.includes(rubro.id)) {
+        // Apply rubro state if it's INACTIVE or COMPLETE
+        if (rubroState === 0) {
+          // INACTIVE: nothing is active
+          setMaterialesActivados({});
+          setCategoriasActivadas({});
+        } else if (rubroState === 2) {
+          // COMPLETE: all are active
           const todasCategoriasActivadas = {};
           const todosMaterialesActivados = {};
 
@@ -345,10 +440,11 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
           });
 
           setCategoriasActivadas(todasCategoriasActivadas);
-          setMaterialesActivados({
-            ...materialesActivadosState,
-            ...todosMaterialesActivados,
-          });
+          setMaterialesActivados(todosMaterialesActivados);
+        } else {
+          // PARTIAL: use what's in DB
+          setMaterialesActivados(materialesActivadosState);
+          setCategoriasActivadas(categoriasActivadasState);
         }
       } catch (error) {
         if (isMounted) {
@@ -369,6 +465,12 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
       isMounted = false;
     };
   }, [rubro]);
+
+  // Update parent in real-time when materials/categories change
+  useEffect(() => {
+    const nuevoEstado = calcularNuevoEstadoRubro();
+    onUpdateRubroState(rubro.id, nuevoEstado);
+  }, [materialesActivados, categoriasActivadas]);
 
   function toggleTodasCategorias(activar) {
     const nuevasActivaciones = {};
@@ -425,111 +527,25 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
     setMaterialesActivados(nuevasActivacionesMateriales);
   }
 
-  async function guardarCambiosMateriales() {
-    try {
-      const userId = await getUserId();
+  function calcularNuevoEstadoRubro() {
+    // Count total materials
+    let totalMateriales = 0;
+    let materialesActivos = 0;
 
-      // Obtener user_categorias existentes
-      const { data: userCategorias } = await supabase
-        .from("user_categorias")
-        .select("id, system_categoria_id, is_active")
-        .eq("user_id", userId);
-
-      const systemCatToUserCat = {};
-      userCategorias?.forEach((uc) => {
-        systemCatToUserCat[uc.system_categoria_id] = uc;
-      });
-
-      // Crear/actualizar user_categorias según el estado de los toggles
-      for (const cat of categorias) {
-        const existing = systemCatToUserCat[cat.id];
-        const catActiva = !!categoriasActivadas[cat.id];
-
-        if (!existing) {
-          const { data: newCat, error: catError } = await supabase
-            .from("user_categorias")
-            .insert({
-              user_id: userId,
-              system_categoria_id: cat.id,
-              nombre: cat.nombre,
-              is_active: catActiva,
-            })
-            .select()
-            .single();
-
-          if (!catError && newCat) {
-            systemCatToUserCat[cat.id] = {
-              id: newCat.id,
-              system_categoria_id: cat.id,
-              is_active: catActiva,
-            };
-          }
-        } else if (existing.is_active !== catActiva) {
-          await supabase
-            .from("user_categorias")
-            .update({ is_active: catActiva })
-            .eq("id", existing.id);
-          existing.is_active = catActiva;
+    categorias.forEach((cat) => {
+      const materialesCat = materiales[cat.id] || [];
+      totalMateriales += materialesCat.length;
+      materialesCat.forEach((mat) => {
+        if (materialesActivados[mat.id]) {
+          materialesActivos += 1;
         }
-      }
-
-      // Obtener todos los user_materiales existentes del usuario para este rubro
-      const userCategoriaIds = Object.values(systemCatToUserCat).map(
-        (uc) => uc.id,
-      );
-
-      const { data: userMateriales } = await supabase
-        .from("user_materiales")
-        .select("id, system_material_id, is_active, user_categoria_id")
-        .eq("user_id", userId)
-        .in("user_categoria_id", userCategoriaIds)
-        .not("system_material_id", "is", null);
-
-      const existingMaterials = {};
-      userMateriales?.forEach((um) => {
-        existingMaterials[um.system_material_id] = um;
       });
+    });
 
-      // Procesar materiales según su estado de toggle
-      for (const cat of categorias) {
-        const userCat = systemCatToUserCat[cat.id];
-        if (!userCat) continue;
-
-        const materialesCat = materiales[cat.id] || [];
-        for (const mat of materialesCat) {
-          const activado = !!materialesActivados[mat.id];
-          const existing = existingMaterials[mat.id];
-
-          if (activado && !existing) {
-            await supabase.from("user_materiales").insert({
-              user_id: userId,
-              user_categoria_id: userCat.id,
-              system_material_id: mat.id,
-              nombre: mat.nombre,
-              descripcion: mat.descripcion,
-              unidad: mat.unidad,
-              precio_unitario: mat.precio,
-              is_active: true,
-            });
-          } else if (activado && existing && !existing.is_active) {
-            await supabase
-              .from("user_materiales")
-              .update({ is_active: true })
-              .eq("id", existing.id);
-          } else if (!activado && existing && existing.is_active) {
-            await supabase
-              .from("user_materiales")
-              .update({ is_active: false })
-              .eq("id", existing.id);
-          }
-        }
-      }
-
-      alert("Cambios aplicados correctamente");
-    } catch (error) {
-      console.error("Error al guardar cambios:", error);
-      alert("Error al aplicar los cambios");
-    }
+    if (totalMateriales === 0) return 0;
+    if (materialesActivos === 0) return 0;
+    if (materialesActivos === totalMateriales) return 2;
+    return 1;
   }
 
   function seleccionarCategoriaParaConfigurar(cat) {
@@ -538,6 +554,33 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
 
   function volverACategorias() {
     setCategoriaSeleccionada(null);
+  }
+
+  function volverAlListado() {
+    // Just return to list - changes will be saved when user clicks "Guardar Cambios" in the main view
+    onVolver();
+  }
+
+  function calcularNuevoEstadoRubro() {
+    // Count total materials in UI
+    const materialesEnUI = Object.values(materiales).flat();
+    const totalMateriales = materialesEnUI.length;
+
+    // Count active materials in UI
+    const materialesActivos = materialesEnUI.filter(
+      (mat) => materialesActivados[mat.id],
+    ).length;
+
+    if (totalMateriales === 0) return 0;
+    if (materialesActivos === 0) return 0;
+    if (materialesActivos === totalMateriales) return 2;
+    return 1;
+  }
+
+  function volverConCambios() {
+    const nuevoEstado = calcularNuevoEstadoRubro();
+    onUpdateRubroState(nuevoEstado);
+    onVolver();
   }
 
   if (cargando) {
@@ -573,7 +616,7 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
         }}
       >
         <button
-          onClick={onVolver}
+          onClick={volverAlListado}
           style={{
             backgroundColor: "#374151",
             color: "#ffffff",
@@ -631,36 +674,6 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
             </p>
           </div>
         </div>
-
-        <button
-          onClick={guardarCambiosMateriales}
-          style={{
-            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "6px",
-            padding: "8px 16px",
-            fontSize: "14px",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "all 0.2s",
-            boxShadow: "0 1px 3px rgba(59, 130, 246, 0.2)",
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background =
-              "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)";
-            e.target.style.transform = "translateY(-1px)";
-            e.target.style.boxShadow = "0 2px 4px rgba(59, 130, 246, 0.3)";
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background =
-              "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)";
-            e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 1px 3px rgba(59, 130, 246, 0.2)";
-          }}
-        >
-          Aplicar
-        </button>
       </div>
 
       {/* Contenido del tree-view */}
@@ -677,7 +690,6 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
             No hay categorías configuradas para este rubro
           </div>
         ) : isMobile ? (
-          // Vista mobile: diseño actual de lista vertical
           <div>
             {categorias.map((cat) => {
               const expandida = categoriasExpandidas[cat.id];
@@ -1032,7 +1044,6 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
             )}
           </div>
         ) : (
-          // Vista PC: 2 columnas (categorías a la izquierda, materiales a la derecha)
           <div
             style={{
               display: "grid",
@@ -1398,9 +1409,10 @@ function VistaDetalladaRubro({ rubro, onVolver, rubrosSeleccionados }) {
 
 export default function Precarga() {
   const [rubros, setRubros] = useState([]);
-  const [rubrosSeleccionados, setRubrosSeleccionados] = useState([]);
-  const [rubrosSeleccionadosIniciales, setRubrosSeleccionadosIniciales] =
-    useState([]);
+  const [rubroStates, setRubroStates] = useState({});
+  const [rubroMaterialCounts, setRubroMaterialCounts] = useState({});
+  const [rubroActiveMaterials, setRubroActiveMaterials] = useState({});
+  const [rubroStatesIniciales, setRubroStatesIniciales] = useState({});
   const [rubroSeleccionado, setRubroSeleccionado] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -1413,25 +1425,33 @@ export default function Precarga() {
     cargarDatos();
   }, []);
 
-  // Función para comparar arrays de UUIDs sin importar orden
-  function arraysIguales(arr1, arr2) {
-    if (arr1.length !== arr2.length) return false;
-    const set1 = new Set(arr1);
-    const set2 = new Set(arr2);
-    if (set1.size !== set2.size) return false;
-    for (const item of set1) {
-      if (!set2.has(item)) return false;
-    }
-    return true;
-  }
+  // Recalculate active materials when rubro states change
+  useEffect(() => {
+    if (rubros.length === 0 || Object.keys(rubroMaterialCounts).length === 0)
+      return;
 
-  // Verificar si hay cambios pendientes
-  const hayCambiosPendientes = !arraysIguales(
-    rubrosSeleccionados,
-    rubrosSeleccionadosIniciales,
-  );
+    const activeMatsPerRubro = {};
+    rubros.forEach((rubro) => {
+      const state = rubroStates[rubro.id] || 0;
+      const totalMats = rubroMaterialCounts[rubro.id] || 0;
 
-  // Protección de navegación al salir de la sección Precarga
+      if (state === 0) {
+        activeMatsPerRubro[rubro.id] = 0;
+      } else if (state === 2) {
+        activeMatsPerRubro[rubro.id] = totalMats;
+      } else {
+        // For PARTIAL state, keep current value (will be recalculated if needed)
+        activeMatsPerRubro[rubro.id] = rubroActiveMaterials[rubro.id] || 0;
+      }
+    });
+    setRubroActiveMaterials(activeMatsPerRubro);
+  }, [rubroStates]);
+
+  // Check for pending changes
+  const hayCambiosPendientes =
+    JSON.stringify(rubroStates) !== JSON.stringify(rubroStatesIniciales);
+
+  // Protect navigation on unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (hayCambiosPendientes) {
@@ -1447,12 +1467,24 @@ export default function Precarga() {
     };
   }, [hayCambiosPendientes]);
 
+  // Register with DirtyForm protection system
+  useEffect(() => {
+    window.currentDirtyForm = {
+      isDirty: hayCambiosPendientes,
+      onSave: guardarCambios,
+    };
+
+    return () => {
+      window.currentDirtyForm = null;
+    };
+  }, [hayCambiosPendientes]);
+
   async function cargarDatos() {
     setCargando(true);
     try {
       const userId = await getUserId();
 
-      // Cargar rubros
+      // Load rubros
       const { data: rubrosData } = await supabase
         .from("system_rubros")
         .select("*")
@@ -1460,33 +1492,97 @@ export default function Precarga() {
 
       setRubros(rubrosData || []);
 
-      // Obtener user_categorias activas del usuario
+      // Load all system_categorias
+      const { data: allSystemCats } = await supabase
+        .from("system_categorias")
+        .select("id, system_rubro_id");
+
+      // Calculate total materials per rubro
+      const rubroIds = (rubrosData || []).map((r) => r.id);
+      const catsPerRubro = {};
+      (allSystemCats || []).forEach((cat) => {
+        if (!catsPerRubro[cat.system_rubro_id]) {
+          catsPerRubro[cat.system_rubro_id] = [];
+        }
+        catsPerRubro[cat.system_rubro_id].push(cat.id);
+      });
+
+      const { data: allSystemMats } = await supabase
+        .from("system_materiales")
+        .select("id, system_categoria_id");
+
+      const totalMatsPerRubro = {};
+      rubroIds.forEach((rubroId) => {
+        const catIds = catsPerRubro[rubroId] || [];
+        totalMatsPerRubro[rubroId] = (allSystemMats || []).filter((m) =>
+          catIds.includes(m.system_categoria_id),
+        ).length;
+      });
+
+      // Get user_categorias
       const { data: userCats } = await supabase
         .from("user_categorias")
-        .select("system_categoria_id")
-        .eq("user_id", userId)
-        .eq("is_active", true);
+        .select("id, system_categoria_id, is_active")
+        .eq("user_id", userId);
 
-      // Obtener los system_categoria_id únicos
-      const systemCatIds = [
-        ...new Set((userCats || []).map((uc) => uc.system_categoria_id)),
-      ];
+      // Get user_materiales (FIXED: need user_categoria_id to map correctly)
+      const { data: userMats } = await supabase
+        .from("user_materiales")
+        .select("user_categoria_id, system_material_id, is_active")
+        .eq("user_id", userId);
 
-      // Obtener los system_rubro_id correspondientes
-      let seleccionados = [];
-      if (systemCatIds.length > 0) {
-        const { data: systemCats } = await supabase
-          .from("system_categorias")
-          .select("system_rubro_id")
-          .in("id", systemCatIds);
+      // Calculate active materials per rubro
+      const statePerRubro = {};
 
-        seleccionados = [
-          ...new Set((systemCats || []).map((sc) => sc.system_rubro_id)),
-        ];
-      }
+      rubroIds.forEach((rubroId) => {
+        const catIds = catsPerRubro[rubroId] || [];
+        const totalMaterials = totalMatsPerRubro[rubroId] || 0;
 
-      setRubrosSeleccionados(seleccionados);
-      setRubrosSeleccionadosIniciales([...seleccionados]);
+        // Count active user_materiales in categories of this rubro
+        const activeMaterials = (userMats || []).filter((um) => {
+          if (!um.is_active) return false;
+
+          // Find the system_categoria_id for this user_material
+          const userCat = (userCats || []).find(
+            (uc) => uc.id === um.user_categoria_id,
+          );
+
+          // Include only if this user_material's category belongs to this rubro
+          return userCat && catIds.includes(userCat.system_categoria_id);
+        }).length;
+
+        // Calculate state: 0=INACTIVE, 1=PARTIAL, 2=COMPLETE
+        let state = 0;
+        if (totalMaterials > 0) {
+          if (activeMaterials === 0) {
+            state = 0; // INACTIVE
+          } else if (activeMaterials === totalMaterials) {
+            state = 2; // COMPLETE
+          } else {
+            state = 1; // PARTIAL
+          }
+        }
+        statePerRubro[rubroId] = state;
+      });
+
+      setRubroMaterialCounts(totalMatsPerRubro);
+      setRubroStates(statePerRubro);
+      setRubroStatesIniciales({ ...statePerRubro });
+
+      // Calculate and store active materials per rubro
+      const activeMatsPerRubro = {};
+      rubroIds.forEach((rubroId) => {
+        const catIds = catsPerRubro[rubroId] || [];
+        const activeMaterials = (userMats || []).filter((um) => {
+          if (!um.is_active) return false;
+          const userCat = (userCats || []).find(
+            (uc) => uc.id === um.user_categoria_id,
+          );
+          return userCat && catIds.includes(userCat.system_categoria_id);
+        }).length;
+        activeMatsPerRubro[rubroId] = activeMaterials;
+      });
+      setRubroActiveMaterials(activeMatsPerRubro);
     } catch (error) {
       console.error("Error al cargar datos:", error);
     } finally {
@@ -1494,12 +1590,11 @@ export default function Precarga() {
     }
   }
 
-  function toggleRubro(rubroId) {
-    const nuevosSeleccionados = rubrosSeleccionados.includes(rubroId)
-      ? rubrosSeleccionados.filter((id) => id !== rubroId)
-      : [...rubrosSeleccionados, rubroId];
-
-    setRubrosSeleccionados(nuevosSeleccionados);
+  function toggleRubroState(rubroId) {
+    setRubroStates((prev) => ({
+      ...prev,
+      [rubroId]: (prev[rubroId] + 1) % 3,
+    }));
   }
 
   async function guardarCambios() {
@@ -1507,12 +1602,12 @@ export default function Precarga() {
     try {
       const userId = await getUserId();
 
-      // Obtener todos los system_rubros con sus system_categorias
+      // Get all system_categorias
       const { data: allSystemCats } = await supabase
         .from("system_categorias")
         .select("id, system_rubro_id, nombre, icono");
 
-      // Obtener user_categorias existentes del usuario
+      // Get existing user_categorias
       const { data: existingUserCats } = await supabase
         .from("user_categorias")
         .select("id, system_categoria_id, is_active")
@@ -1523,147 +1618,126 @@ export default function Precarga() {
         userCatBySystemId[uc.system_categoria_id] = uc;
       });
 
-      // Determinar qué system_categorias pertenecen a rubros activados vs desactivados
-      const catsRubrosActivados = (allSystemCats || []).filter((sc) =>
-        rubrosSeleccionados.includes(sc.system_rubro_id),
-      );
-      const catsRubrosDesactivados = (allSystemCats || []).filter(
-        (sc) => !rubrosSeleccionados.includes(sc.system_rubro_id),
-      );
+      // Get all system_materiales
+      const { data: allSystemMats } = await supabase
+        .from("system_materiales")
+        .select(
+          "id, system_categoria_id, nombre, descripcion, unidad, precio_unitario",
+        );
 
-      // --- Rubros ACTIVADOS: crear/activar user_categorias y user_materiales ---
-      const newUserCatIds = [];
-      for (const sysCat of catsRubrosActivados) {
-        const existing = userCatBySystemId[sysCat.id];
-        if (existing) {
-          if (!existing.is_active) {
-            await supabase
-              .from("user_categorias")
-              .update({ is_active: true })
-              .eq("id", existing.id);
+      // For each rubro, apply state changes
+      for (const [rubroId, state] of Object.entries(rubroStates)) {
+        const catsInRubro = (allSystemCats || []).filter(
+          (sc) => sc.system_rubro_id === rubroId,
+        );
+
+        // If INACTIVE (state 0): deactivate all categories and materials
+        if (state === 0) {
+          for (const cat of catsInRubro) {
+            const existing = userCatBySystemId[cat.id];
+            if (existing && existing.is_active) {
+              await supabase
+                .from("user_categorias")
+                .update({ is_active: false })
+                .eq("id", existing.id);
+            }
           }
-          newUserCatIds.push({ userCatId: existing.id, systemCatId: sysCat.id });
-        } else {
-          const { data: newCat } = await supabase
-            .from("user_categorias")
-            .insert({
-              user_id: userId,
-              system_categoria_id: sysCat.id,
-              nombre: sysCat.nombre,
-              is_active: true,
-            })
-            .select()
-            .single();
-
-          if (newCat) {
-            newUserCatIds.push({
-              userCatId: newCat.id,
-              systemCatId: sysCat.id,
-            });
-          }
-        }
-      }
-
-      // Obtener system_materiales para las categorías activadas
-      const activatedSystemCatIds = catsRubrosActivados.map((sc) => sc.id);
-      let systemMaterials = [];
-      if (activatedSystemCatIds.length > 0) {
-        const { data: mats } = await supabase
-          .from("system_materiales")
-          .select(
-            "id, system_categoria_id, nombre, descripcion, unidad, precio_unitario",
-          )
-          .in("system_categoria_id", activatedSystemCatIds);
-        systemMaterials = mats || [];
-      }
-
-      // Obtener user_materiales existentes para las user_categorias activadas
-      const activatedUserCatIds = newUserCatIds.map((x) => x.userCatId);
-      let existingUserMats = [];
-      if (activatedUserCatIds.length > 0) {
-        const { data: uMats } = await supabase
-          .from("user_materiales")
-          .select("id, system_material_id, is_active, user_categoria_id")
-          .eq("user_id", userId)
-          .in("user_categoria_id", activatedUserCatIds)
-          .not("system_material_id", "is", null);
-        existingUserMats = uMats || [];
-      }
-
-      const existingMatBySystemId = {};
-      existingUserMats.forEach((um) => {
-        existingMatBySystemId[um.system_material_id] = um;
-      });
-
-      // Mapear system_categoria_id → user_categoria_id
-      const sysCatToUserCat = {};
-      newUserCatIds.forEach((x) => {
-        sysCatToUserCat[x.systemCatId] = x.userCatId;
-      });
-
-      // Crear/activar user_materiales para rubros activados
-      for (const sysMat of systemMaterials) {
-        const userCatId = sysCatToUserCat[sysMat.system_categoria_id];
-        if (!userCatId) continue;
-
-        const existing = existingMatBySystemId[sysMat.id];
-        if (existing) {
-          if (!existing.is_active) {
+          const userCatIds = catsInRubro
+            .map((c) => userCatBySystemId[c.id]?.id)
+            .filter(Boolean);
+          if (userCatIds.length > 0) {
             await supabase
               .from("user_materiales")
-              .update({ is_active: true })
-              .eq("id", existing.id);
+              .update({ is_active: false })
+              .eq("user_id", userId)
+              .in("user_categoria_id", userCatIds);
           }
-        } else {
-          await supabase.from("user_materiales").insert({
-            user_id: userId,
-            user_categoria_id: userCatId,
-            system_material_id: sysMat.id,
-            nombre: sysMat.nombre,
-            descripcion: sysMat.descripcion,
-            unidad: sysMat.unidad,
-            precio_unitario: sysMat.precio_unitario,
-            is_active: true,
+        }
+        // If COMPLETE (state 2): activate all categories and materials
+        else if (state === 2) {
+          const userCatIds = [];
+          for (const cat of catsInRubro) {
+            let existing = userCatBySystemId[cat.id];
+            if (!existing) {
+              const { data: newCat } = await supabase
+                .from("user_categorias")
+                .insert({
+                  user_id: userId,
+                  system_categoria_id: cat.id,
+                  nombre: cat.nombre,
+                  is_active: true,
+                })
+                .select()
+                .single();
+              if (newCat) {
+                existing = newCat;
+                userCatBySystemId[cat.id] = existing;
+              }
+            } else if (!existing.is_active) {
+              await supabase
+                .from("user_categorias")
+                .update({ is_active: true })
+                .eq("id", existing.id);
+              existing.is_active = true;
+            }
+            if (existing) userCatIds.push(existing.id);
+          }
+
+          const matsInRubro = (allSystemMats || []).filter((m) =>
+            catsInRubro.some((c) => c.id === m.system_categoria_id),
+          );
+
+          const { data: existingUserMats } = await supabase
+            .from("user_materiales")
+            .select("id, system_material_id, is_active")
+            .eq("user_id", userId)
+            .in("user_categoria_id", userCatIds);
+
+          const existingMatMap = {};
+          (existingUserMats || []).forEach((um) => {
+            existingMatMap[um.system_material_id] = um;
           });
+
+          const catIdToUserCatId = {};
+          for (const cat of catsInRubro) {
+            const uc = userCatBySystemId[cat.id];
+            if (uc) catIdToUserCatId[cat.id] = uc.id;
+          }
+
+          for (const mat of matsInRubro) {
+            const userCatId = catIdToUserCatId[mat.system_categoria_id];
+            if (!userCatId) continue;
+
+            const existing = existingMatMap[mat.id];
+            if (existing) {
+              if (!existing.is_active) {
+                await supabase
+                  .from("user_materiales")
+                  .update({ is_active: true })
+                  .eq("id", existing.id);
+              }
+            } else {
+              await supabase.from("user_materiales").insert({
+                user_id: userId,
+                user_categoria_id: userCatId,
+                system_material_id: mat.id,
+                nombre: mat.nombre,
+                descripcion: mat.descripcion,
+                unidad: mat.unidad,
+                precio_unitario: mat.precio_unitario,
+                is_active: true,
+              });
+            }
+          }
         }
       }
 
-      // --- Rubros DESACTIVADOS: desactivar user_categorias y user_materiales ---
-      // Desactivar user_categorias correspondientes
-      const userCatIdsToDeactivate = [];
-      for (const sysCat of catsRubrosDesactivados) {
-        const existing = userCatBySystemId[sysCat.id];
-        if (existing && existing.is_active) {
-          await supabase
-            .from("user_categorias")
-            .update({ is_active: false })
-            .eq("id", existing.id);
-          userCatIdsToDeactivate.push(existing.id);
-        }
-      }
-
-      // Desactivar user_materiales de esas categorías
-      if (userCatIdsToDeactivate.length > 0) {
-        await supabase
-          .from("user_materiales")
-          .update({ is_active: false })
-          .eq("user_id", userId)
-          .in("user_categoria_id", userCatIdsToDeactivate)
-          .eq("is_active", true);
-      }
-
-      // Actualizar estado inicial
-      setRubrosSeleccionadosIniciales([...rubrosSeleccionados]);
-
-      // Mostrar feedback de sincronización
+      setRubroStatesIniciales({ ...rubroStates });
       setSincronizando(true);
       setTimeout(() => setSincronizando(false), 2000);
-
-      // Recargar datos para sincronizar
-      await cargarDatos();
     } catch (error) {
       console.error("Error al guardar cambios:", error);
-      alert("Error al guardar los cambios");
+      alert("Error al aplicar los cambios");
     } finally {
       setGuardando(false);
     }
@@ -1675,8 +1749,17 @@ export default function Precarga() {
       accionPendiente();
       setAccionPendiente(null);
     }
-    // Restaurar estado inicial
-    setRubrosSeleccionados([...rubrosSeleccionadosIniciales]);
+    setRubroStates({ ...rubroStatesIniciales });
+  }
+
+  function guardarYSalir() {
+    setMostrarConfirmacion(false);
+    guardarCambios().then(() => {
+      if (accionPendiente) {
+        accionPendiente();
+        setAccionPendiente(null);
+      }
+    });
   }
 
   function cancelarSalida() {
@@ -1685,35 +1768,54 @@ export default function Precarga() {
   }
 
   function seleccionarRubro(rubro) {
-    // No preguntar al entrar a la vista detallada, es solo visualización de la Fuente Maestra
     setRubroSeleccionado(rubro);
   }
 
-  function volverAlListado() {
+  function cerrarVistaDetallada() {
     setRubroSeleccionado(null);
   }
 
-  const rubrosActivos = rubros.filter((r) =>
-    rubrosSeleccionados.includes(r.id),
-  );
+  function volverAlListadoConEstado(rubroId, nuevoEstado, materialesActivos) {
+    setRubroStates((prev) => ({
+      ...prev,
+      [rubroId]: nuevoEstado,
+    }));
+    if (materialesActivos !== undefined) {
+      setRubroActiveMaterials((prev) => ({
+        ...prev,
+        [rubroId]: materialesActivos,
+      }));
+    }
+    setRubroSeleccionado(null);
+  }
 
-  // Si hay un rubro seleccionado, mostrar vista detallada
+  function actualizarEstadoRubroEnTiempoReal(rubroId, nuevoEstado) {
+    setRubroStates((prev) => ({
+      ...prev,
+      [rubroId]: nuevoEstado,
+    }));
+  }
+
+  const rubrosActivos = rubros.filter((r) => rubroStates[r.id] > 0);
+
+  // Show detailed view if a rubro is selected
   if (rubroSeleccionado) {
     return (
       <VistaDetalladaRubro
         rubro={rubroSeleccionado}
-        onVolver={volverAlListado}
-        rubrosSeleccionados={rubrosSeleccionados}
+        onVolver={cerrarVistaDetallada}
+        onUpdateRubroState={actualizarEstadoRubroEnTiempoReal}
+        rubroState={rubroStates[rubroSeleccionado.id] || 0}
       />
     );
   }
 
-  // Vista principal de listado
+  // Main list view
   return (
     <div
       style={{ backgroundColor: "#0f172a", height: "100vh", overflowY: "auto" }}
     >
-      {/* Banner de estado superior con diseño delgado */}
+      {/* Top status banner */}
       <div
         style={{
           background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
@@ -1752,7 +1854,7 @@ export default function Precarga() {
             </div>
           </div>
 
-          {/* Botón de guardar siempre visible */}
+          {/* Save button always visible */}
           <button
             onClick={guardarCambios}
             disabled={guardando || !hayCambiosPendientes}
@@ -1800,7 +1902,7 @@ export default function Precarga() {
         </div>
       </div>
 
-      {/* Contenido principal con grid responsivo y scroll */}
+      {/* Main content with responsive grid */}
       <div
         style={{
           padding: "16px 24px 32px 24px",
@@ -1876,13 +1978,17 @@ export default function Precarga() {
                 }}
               >
                 {rubros.map((rubro) => {
-                  const activo = rubrosSeleccionados.includes(rubro.id);
+                  const state = rubroStates[rubro.id] || 0;
+                  const totalMats = rubroMaterialCounts[rubro.id] || 0;
+                  const activeMats = rubroActiveMaterials[rubro.id] || 0;
                   return (
                     <RubroCard
                       key={rubro.id}
                       rubro={rubro}
-                      activo={activo}
-                      onToggle={() => toggleRubro(rubro.id)}
+                      toggleState={state}
+                      activeMaterials={activeMats}
+                      totalMaterials={totalMats}
+                      onToggle={() => toggleRubroState(rubro.id)}
                       onClick={() => seleccionarRubro(rubro)}
                     />
                   );
@@ -1892,7 +1998,7 @@ export default function Precarga() {
           </div>
         )}
 
-        {/* Modal de confirmación para salir sin guardar */}
+        {/* Confirmation modal */}
         {mostrarConfirmacion && (
           <div
             style={{
@@ -1985,7 +2091,47 @@ export default function Precarga() {
                     e.target.style.backgroundColor = "#dc2626";
                   }}
                 >
-                  Salir sin guardar
+                  Descartar
+                </button>
+                <button
+                  onClick={guardarYSalir}
+                  disabled={guardando}
+                  style={{
+                    background: guardando
+                      ? "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)"
+                      : "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: guardando ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    boxShadow: guardando
+                      ? "none"
+                      : "0 1px 3px rgba(59, 130, 246, 0.2)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!guardando) {
+                      e.target.style.background =
+                        "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)";
+                      e.target.style.transform = "translateY(-1px)";
+                      e.target.style.boxShadow =
+                        "0 2px 4px rgba(59, 130, 246, 0.3)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!guardando) {
+                      e.target.style.background =
+                        "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)";
+                      e.target.style.transform = "translateY(0)";
+                      e.target.style.boxShadow =
+                        "0 1px 3px rgba(59, 130, 246, 0.2)";
+                    }
+                  }}
+                >
+                  {guardando ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </div>
