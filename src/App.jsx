@@ -7,6 +7,7 @@ import Login from "./components/Login";
 import Registro from "./components/Registro";
 import ResetPassword from "./components/ResetPassword";
 import ForgotPassword from "./components/ForgotPassword";
+import VerifyRecoveryCode from "./components/VerifyRecoveryCode";
 import ConfirmarEmail from "./components/ConfirmarEmail";
 import Materiales from "./components/Materiales";
 import Servicios from "./components/Servicios";
@@ -61,6 +62,8 @@ export default function App() {
   const [resetMode, setResetMode] = useState(false);
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
   const [mostrarForgotPassword, setMostrarForgotPassword] = useState(false);
+  const [mostrarVerifyCode, setMostrarVerifyCode] = useState(false);
+  const [emailRecuperacion, setEmailRecuperacion] = useState("");
   const [perfil, setPerfil] = useState(null);
   const [estadoCuenta, setEstadoCuenta] = useState({
     soloLectura: false,
@@ -314,11 +317,30 @@ export default function App() {
   }
 
   if (!session) {
+    if (mostrarVerifyCode)
+      return (
+        <VerifyRecoveryCode
+          email={emailRecuperacion}
+          onBack={() => {
+            setMostrarVerifyCode(false);
+            setEmailRecuperacion("");
+            setMostrarForgotPassword(false);
+          }}
+          onSuccess={() => {
+            setMostrarVerifyCode(false);
+            setEmailRecuperacion("");
+            setMostrarForgotPassword(false);
+          }}
+        />
+      );
     if (mostrarForgotPassword)
       return (
         <ForgotPassword
           onBack={() => setMostrarForgotPassword(false)}
-          onEmailSent={() => setMostrarForgotPassword(false)}
+          onEmailSent={(email) => {
+            setEmailRecuperacion(email);
+            setMostrarVerifyCode(true);
+          }}
         />
       );
     if (mostrarRegistro)
