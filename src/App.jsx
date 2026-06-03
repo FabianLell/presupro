@@ -6,6 +6,7 @@ import { DirtyFormModal } from "./components/DirtyFormModal";
 import Login from "./components/Login";
 import Registro from "./components/Registro";
 import ResetPassword from "./components/ResetPassword";
+import ForgotPassword from "./components/ForgotPassword";
 import ConfirmarEmail from "./components/ConfirmarEmail";
 import Materiales from "./components/Materiales";
 import Servicios from "./components/Servicios";
@@ -59,6 +60,7 @@ export default function App() {
   const [cargando, setCargando] = useState(true);
   const [resetMode, setResetMode] = useState(false);
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
+  const [mostrarForgotPassword, setMostrarForgotPassword] = useState(false);
   const [perfil, setPerfil] = useState(null);
   const [estadoCuenta, setEstadoCuenta] = useState({
     soloLectura: false,
@@ -210,7 +212,10 @@ export default function App() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (event === "PASSWORD_RECOVERY") setResetMode(true);
-      if (event === "SIGNED_IN") setMostrarRegistro(false);
+      if (event === "SIGNED_IN") {
+        setMostrarRegistro(false);
+        setMostrarForgotPassword(false);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -309,9 +314,21 @@ export default function App() {
   }
 
   if (!session) {
+    if (mostrarForgotPassword)
+      return (
+        <ForgotPassword
+          onBack={() => setMostrarForgotPassword(false)}
+          onEmailSent={() => setMostrarForgotPassword(false)}
+        />
+      );
     if (mostrarRegistro)
       return <Registro onBackToLogin={() => setMostrarRegistro(false)} />;
-    return <Login onShowRegistro={() => setMostrarRegistro(true)} />;
+    return (
+      <Login
+        onShowRegistro={() => setMostrarRegistro(true)}
+        onShowForgotPassword={() => setMostrarForgotPassword(true)}
+      />
+    );
   }
 
   const sessionEmail = (session?.user?.email || "").trim().toLowerCase();
