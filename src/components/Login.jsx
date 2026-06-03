@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../supabase";
 
-export default function Login({ onShowRegistro }) {
+export default function Login({ onShowRegistro, onShowForgotPassword }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -226,7 +226,7 @@ export default function Login({ onShowRegistro }) {
 
         <button
           className="btn btn-secondary"
-          onClick={handleForgotPassword}
+          onClick={onShowForgotPassword}
           style={{
             width: "100%",
             padding: "0.75rem",
