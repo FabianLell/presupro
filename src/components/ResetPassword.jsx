@@ -22,7 +22,7 @@ export default function ResetPassword({ onDone }) {
       setError("Error al actualizar la contraseña");
     } else {
       setOk("Contraseña actualizada correctamente");
-      supabase.auth.signOut();
+      await supabase.auth.signOut();
       setTimeout(() => onDone(), 2000);
     }
     setCargando(false);
