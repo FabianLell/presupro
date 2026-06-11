@@ -171,7 +171,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
       estado: p.estado || "borrador",
     };
     const newItemsMat = (pm.data || []).map((i) => ({
-      material_id: i.material_id,
+      material_id: i.user_material_id,
       nombre: i.user_materiales?.nombre,
       unidad: i.user_materiales?.unidad,
       cantidad: i.cantidad,
@@ -179,7 +179,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
       subtotal: i.subtotal,
     }));
     const newItemsSer = (ps.data || []).map((i) => ({
-      servicio_id: i.servicio_id,
+      servicio_id: i.user_servicio_id,
       nombre: i.user_servicios?.nombre,
       precio: i.precio,
       descripcion: i.descripcion || "",
@@ -446,7 +446,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
       await supabase.from("presupuesto_materiales").insert(
         currentItemsMat.map((i) => ({
           presupuesto_id: pid,
-          material_id: i.material_id,
+          user_material_id: i.material_id,
           cantidad: i.cantidad,
           precio_unitario: i.precio_unitario,
           subtotal: i.subtotal,
@@ -457,7 +457,7 @@ export default function Presupuestos({ perfil, soloLectura }) {
       await supabase.from("presupuesto_servicios").insert(
         currentItemsSer.map((i) => ({
           presupuesto_id: pid,
-          servicio_id: i.servicio_id,
+          user_servicio_id: i.servicio_id,
           precio: parseFloat(i.precio) || 0,
           descripcion: i.descripcion,
         })),

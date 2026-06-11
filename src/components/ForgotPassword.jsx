@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 
 export default function ForgotPassword({ onBack, onEmailSent }) {
@@ -6,6 +6,14 @@ export default function ForgotPassword({ onBack, onEmailSent }) {
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [emailAnterior, setEmailAnterior] = useState("");
+
+  useEffect(() => {
+    const emailGuardado = localStorage.getItem("recoveryEmail");
+    if (emailGuardado) {
+      setEmailAnterior(emailGuardado);
+    }
+  }, []);
 
   async function handleSendReset() {
     setError("");
@@ -19,10 +27,21 @@ export default function ForgotPassword({ onBack, onEmailSent }) {
     if (error) {
       setError("No se pudo enviar el email de recuperación");
     } else {
+      localStorage.setItem("recoveryEmail", email.trim());
       setOk("Te enviamos un código al email. Ingresalo para cambiar tu contraseña");
       setTimeout(() => onEmailSent(email.trim()), 2000);
     }
     setCargando(false);
+  }
+
+  function handleContinuarAnterior() {
+    onEmailSent(emailAnterior);
+  }
+
+  function handleNuevoEmail() {
+    localStorage.removeItem("recoveryEmail");
+    setEmailAnterior("");
+    setEmail("");
   }
 
   return (
@@ -66,38 +85,87 @@ export default function ForgotPassword({ onBack, onEmailSent }) {
         {error && <p className="msg-error">{error}</p>}
         {ok && <p className="msg-ok">{ok}</p>}
 
-        <input
-          type="email"
-          placeholder="Tu email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSendReset()}
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            borderRadius: "8px",
-            border: "1px solid #333",
-            background: "#222",
-            color: "#f0f0f0",
-            fontSize: "0.95rem",
-            marginBottom: "1rem",
-            boxSizing: "border-box",
-          }}
-        />
+        {emailAnterior ? (
+          <>
+            <div
+              style={{
+                background: "#222",
+                border: "1px solid #333",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1rem",
+                textAlign: "center",
+              }}
+            >
+              <p style={{ color: "#888", fontSize: "0.9rem", margin: "0 0 0.5rem 0" }}>
+                Código enviado a:
+              </p>
+              <p style={{ color: "#f0f0f0", fontSize: "0.95rem", margin: 0 }}>
+                {emailAnterior}
+              </p>
+            </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={handleSendReset}
-          disabled={cargando}
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            fontSize: "1rem",
-            marginTop: "0.5rem",
-          }}
-        >
-          {cargando ? "Enviando..." : "Enviar instrucciones"}
-        </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleContinuarAnterior}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                fontSize: "1rem",
+              }}
+            >
+              Continuar con código anterior
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={handleNuevoEmail}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                fontSize: "1rem",
+                marginTop: "0.6rem",
+              }}
+            >
+              Enviar nuevo código
+            </button>
+          </>
+        ) : (
+          <>
+            <input
+              type="email"
+              placeholder="Tu email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSendReset()}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                borderRadius: "8px",
+                border: "1px solid #333",
+                background: "#222",
+                color: "#f0f0f0",
+                fontSize: "0.95rem",
+                marginBottom: "1rem",
+                boxSizing: "border-box",
+              }}
+            />
+
+            <button
+              className="btn btn-primary"
+              onClick={handleSendReset}
+              disabled={cargando}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                fontSize: "1rem",
+                marginTop: "0.5rem",
+              }}
+            >
+              {cargando ? "Enviando..." : "Enviar instrucciones"}
+            </button>
+          </>
+        )}
 
         <button
           className="btn btn-secondary"

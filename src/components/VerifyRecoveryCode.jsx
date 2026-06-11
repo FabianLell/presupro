@@ -34,6 +34,25 @@ export default function VerifyRecoveryCode({ email, onBack, onSuccess }) {
     setTimeout(() => setStep("password"), 1000);
   }
 
+  async function handleSolicitudNuevoCodigo() {
+    setError("");
+    setOk("");
+    setCargando(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}`,
+    });
+
+    setCargando(false);
+
+    if (error) {
+      return setError("No se pudo enviar un nuevo código");
+    }
+
+    setCode("");
+    setOk("Se envió un nuevo código a tu email");
+  }
+
   async function handleSetPassword() {
     setError("");
     setOk("");
@@ -56,6 +75,10 @@ export default function VerifyRecoveryCode({ email, onBack, onSuccess }) {
     }
 
     setOk("Contraseña actualizada correctamente");
+
+    // Limpiar localStorage y logout
+    localStorage.removeItem("recoveryEmail");
+    supabase.auth.signOut();
     setTimeout(() => onSuccess(), 1500);
   }
 
@@ -149,6 +172,20 @@ export default function VerifyRecoveryCode({ email, onBack, onSuccess }) {
               }}
             >
               {cargando ? "Verificando..." : "Verificar código"}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={handleSolicitudNuevoCodigo}
+              disabled={cargando}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                fontSize: "1rem",
+                marginTop: "0.6rem",
+              }}
+            >
+              {cargando ? "Enviando..." : "Solicitar nuevo código"}
             </button>
 
             <button
